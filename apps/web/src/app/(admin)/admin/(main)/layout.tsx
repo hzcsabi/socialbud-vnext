@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
@@ -34,14 +35,14 @@ export default async function AdminMainLayout({
       <aside className="flex w-60 flex-col border-r border-border bg-muted/30">
         <div className="flex h-14 items-center border-b border-border px-4">
           <Link href="/admin" className="flex items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded">
-            <img
+            <Image
               src="/admin-logo.svg"
               alt="Socialbud"
               className="h-[1.6rem] w-auto dark:hidden"
               width={120}
               height={32}
             />
-            <img
+            <Image
               src="/admin-logo-dark.svg"
               alt="Socialbud"
               className="h-[1.6rem] w-auto hidden dark:block"

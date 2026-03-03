@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/browser";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -9,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
  * Supabase redirects here with ?code=; we exchange it for a session on the client
  * then do a full redirect to /app so the app layout sees the session.
  */
-export default function OAuthCallbackPage() {
+function OAuthCallbackContent() {
   const searchParams = useSearchParams();
   const handled = useRef(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,5 +73,19 @@ export default function OAuthCallbackPage() {
     <div className="flex min-h-screen items-center justify-center p-4">
       <p className="text-muted-foreground">Signing you in…</p>
     </div>
+  );
+}
+
+export default function OAuthCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center p-4">
+          <p className="text-muted-foreground">Signing you in…</p>
+        </div>
+      }
+    >
+      <OAuthCallbackContent />
+    </Suspense>
   );
 }
