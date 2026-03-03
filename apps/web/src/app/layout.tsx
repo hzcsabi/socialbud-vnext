@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthHashHandler } from "@/app/auth/callback/auth-hash-handler";
 
 export const metadata: Metadata = {
   title: "Socialbud",
@@ -13,7 +14,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <AuthHashHandler />
+        {children}
+      </body>
     </html>
   );
 }
