@@ -11,6 +11,8 @@ export type UserListEntry = {
   website: string | null;
   status: "active" | "pending" | "banned";
   createdAt: string;
+  orgType: "individual" | "team" | "corporation" | null;
+  orgName: string | null;
 };
 
 export async function listUsersForAdmin(): Promise<{
@@ -38,9 +40,38 @@ export async function listUsersForAdmin(): Promise<{
       (profiles ?? []).map((p) => [p.user_id, p])
     );
 
+    const { data: members } = await supabase
+      .from("organization_members")
+      .select("user_id, organization_id")
+      .in("user_id", userIds)
+      .order("organization_id");
+
+    const orgIds = [
+      ...new Set((members ?? []).map((m) => m.organization_id)),
+    ];
+    const { data: orgs } = await supabase
+      .from("organizations")
+      .select("id, kind, name")
+      .in("id", orgIds);
+
+    const orgById = new Map((orgs ?? []).map((o) => [o.id, o]));
+    const firstOrgByUserId = new Map<string, { kind: "individual" | "team" | "corporation"; name: string }>();
+    for (const m of members ?? []) {
+      if (!firstOrgByUserId.has(m.user_id)) {
+        const org = orgById.get(m.organization_id);
+        if (org && (org.kind === "individual" || org.kind === "team" || org.kind === "corporation")) {
+          firstOrgByUserId.set(m.user_id, {
+            kind: org.kind,
+            name: org.name ?? "",
+          });
+        }
+      }
+    }
+
     const now = new Date();
     const users: UserListEntry[] = authUsers.map((u) => {
       const profile = profileByUserId.get(u.id);
+      const org = firstOrgByUserId.get(u.id);
       let status: UserListEntry["status"] = "active";
       if (u.banned_until && new Date(u.banned_until) > now) status = "banned";
       else if (!u.email_confirmed_at) status = "pending";
@@ -52,6 +83,8 @@ export async function listUsersForAdmin(): Promise<{
         website: profile?.website ?? null,
         status,
         createdAt: u.created_at,
+        orgType: org?.kind ?? null,
+        orgName: org?.name ?? null,
       };
     });
 
