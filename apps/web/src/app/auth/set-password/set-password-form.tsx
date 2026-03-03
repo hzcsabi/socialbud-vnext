@@ -58,6 +58,12 @@ export function SetPasswordForm() {
       />
       {message && <p className="text-sm text-destructive" role="alert">{message}</p>}
       <Button type="submit" disabled={loading} className="w-full">
+        {loading && (
+          <span
+            className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+            aria-hidden="true"
+          />
+        )}
         {loading ? "Setting password…" : "Set password"}
       </Button>
     </form>
