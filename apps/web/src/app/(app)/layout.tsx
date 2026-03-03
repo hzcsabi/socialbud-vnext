@@ -21,6 +21,15 @@ export default async function AppLayout({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("display_name, company_name, website")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const incomplete = !profile || !profile.display_name?.trim();
+  if (incomplete) redirect("/onboarding");
+
   return (
     <div className="min-h-screen p-8">
       <header className="mb-6 flex items-center justify-between border-b pb-4">

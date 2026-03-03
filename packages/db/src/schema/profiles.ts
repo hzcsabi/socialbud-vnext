@@ -3,6 +3,8 @@ export interface ProfileRow {
   user_id: string;
   display_name: string | null;
   avatar_url: string | null;
+  company_name: string | null;
+  website: string | null;
   created_at: Date;
   updated_at: Date;
 }

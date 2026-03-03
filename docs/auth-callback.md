@@ -6,7 +6,8 @@ After a user clicks the confirmation or recovery link in the email, Supabase can
 
 1. **Hash fallback (default emails)**  
    When the URL contains `#access_token=...&refresh_token=...`, a client component (`AuthHashHandler`) runs, calls `setSession()` so the session is stored in cookies, then redirects:
-   - **recovery** or **signup** → `/auth/set-password` (so they can set or reset their password)
+   - **recovery** → `/auth/set-password` (reset password flow)
+   - **signup** or **email** (confirm signup) → `/onboarding` (new users complete profile, then go to app)
    - otherwise → `/app`
 
 2. **Server callback**  
@@ -21,15 +22,15 @@ After a user clicks the confirmation or recovery link in the email, Supabase can
 
 In **Authentication → Email Templates**, set the link in each template as below. Use your real **Site URL** (e.g. `https://yourapp.com` or `http://localhost:3000`).
 
-### Confirm signup (first-time set password)
+### Confirm signup (email + password signup)
 
-So new users land on the set-password page after confirming their email:
+So new users land on onboarding after confirming their email (they already have a password):
 
 ```html
-<a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email&next=/auth/set-password">Confirm your email</a>
+<a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email&next=/onboarding">Confirm your email</a>
 ```
 
-If you use the **default** Supabase redirect (no custom template), the hash handler will send `type=signup` users to `/auth/set-password` automatically.
+If you use the **default** Supabase redirect (no custom template), the hash handler will send `type=signup` or `type=email` to `/onboarding` automatically.
 
 ### Recover password (reset password)
 

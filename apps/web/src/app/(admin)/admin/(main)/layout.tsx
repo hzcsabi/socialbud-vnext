@@ -37,13 +37,28 @@ export default async function AdminMainLayout({
             <img
               src="/admin-logo.svg"
               alt="Socialbud"
-              className="h-[1.6rem] w-auto"
+              className="h-[1.6rem] w-auto dark:hidden"
+              width={120}
+              height={32}
+            />
+            <img
+              src="/admin-logo-dark.svg"
+              alt="Socialbud"
+              className="h-[1.6rem] w-auto hidden dark:block"
               width={120}
               height={32}
             />
           </Link>
         </div>
-        <nav className="flex-1 p-3">
+        <nav className="flex-1 p-3 space-y-0.5">
+          <Link
+            href="/admin/users"
+            className={cn(
+              "block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+            )}
+          >
+            Users
+          </Link>
           <Link
             href="/admin/team-access"
             className={cn(

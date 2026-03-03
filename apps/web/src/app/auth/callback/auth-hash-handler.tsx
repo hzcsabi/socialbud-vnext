@@ -26,8 +26,13 @@ export function AuthHashHandler() {
     if (!accessToken || !refreshToken) return;
     handled.current = true;
     const supabase = createClient();
-    const goToSetPassword = type === "recovery" || type === "signup" || type === "email";
-    const nextPath = goToSetPassword ? "/auth/set-password" : "/app";
+    const goToSetPassword = type === "recovery";
+    const goToOnboarding = type === "signup" || type === "email";
+    const nextPath = goToSetPassword
+      ? "/auth/set-password"
+      : goToOnboarding
+        ? "/onboarding"
+        : "/app";
     supabase.auth
       .setSession({ access_token: accessToken, refresh_token: refreshToken })
       .then(() => {

@@ -2,31 +2,45 @@
 
 import { createClient } from "@/lib/supabase/browser";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export function LoginForm() {
-  const router = useRouter();
+export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const redirectTo = `${origin}/auth/callback?type=recovery&next=/auth/set-password`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo,
+    });
     setLoading(false);
     if (error) {
       setMessage(error.message);
       return;
     }
-    router.push("/app");
-    router.refresh();
+    setSuccess(true);
+  }
+
+  if (success) {
+    return (
+      <div className="mt-4 space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Check your email for a link to reset your password.
+        </p>
+        <Button asChild variant="outline" className="w-full">
+          <Link href="/login">Back to sign in</Link>
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -38,29 +52,17 @@ export function LoginForm() {
         onChange={(e) => setEmail(e.target.value)}
         required
       />
-      <Input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-      />
-      <p className="text-right text-sm">
-        <Link
-          href="/forgot-password"
-          className="text-primary underline-offset-4 hover:underline"
-        >
-          Forgot password?
-        </Link>
-      </p>
-      {message && <p className="text-sm text-destructive" role="alert">{message}</p>}
+      {message && (
+        <p className="text-sm text-destructive" role="alert">
+          {message}
+        </p>
+      )}
       <Button type="submit" disabled={loading} className="w-full">
-        {loading ? "Signing in…" : "Sign in"}
+        {loading ? "Sending…" : "Send reset link"}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{" "}
-        <Link href="/signup" className="text-primary underline-offset-4 hover:underline">
-          Sign up
+        <Link href="/login" className="text-primary underline-offset-4 hover:underline">
+          Back to sign in
         </Link>
       </p>
     </form>
