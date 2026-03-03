@@ -59,6 +59,12 @@ export function LoginForm() {
         disabled={anyLoading}
         onClick={handleGoogleSignIn}
       >
+        {googleLoading && (
+          <span
+            className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+            aria-hidden="true"
+          />
+        )}
         {googleLoading ? "Redirecting…" : "Continue with Google"}
       </Button>
       <div className="relative my-6">
@@ -94,6 +100,12 @@ export function LoginForm() {
         </p>
         {message && <p className="text-sm text-destructive" role="alert">{message}</p>}
         <Button type="submit" disabled={anyLoading} className="w-full">
+          {loading && (
+            <span
+              className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+              aria-hidden="true"
+            />
+          )}
           {loading ? "Signing in…" : "Sign in"}
         </Button>
       </form>

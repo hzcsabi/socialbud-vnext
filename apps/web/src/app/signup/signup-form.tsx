@@ -70,6 +70,12 @@ export function SignupForm() {
         disabled={anyLoading}
         onClick={handleGoogleSignUp}
       >
+        {googleLoading && (
+          <span
+            className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+            aria-hidden="true"
+          />
+        )}
         {googleLoading ? "Redirecting…" : "Continue with Google"}
       </Button>
       <div className="relative my-6">
@@ -101,6 +107,12 @@ export function SignupForm() {
           </p>
         )}
         <Button type="submit" disabled={anyLoading} className="w-full">
+          {loading && (
+            <span
+              className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+              aria-hidden="true"
+            />
+          )}
           {loading ? "Creating account…" : "Create account"}
         </Button>
       </form>
