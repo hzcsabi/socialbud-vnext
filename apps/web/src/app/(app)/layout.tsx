@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { ConfigError } from "./config-error";
+import { cn } from "@/lib/utils";
 
 export default async function AppLayout({
   children,
@@ -30,17 +32,87 @@ export default async function AppLayout({
   const incomplete = !profile || !profile.display_name?.trim();
   if (incomplete) redirect("/onboarding");
 
+  const displayName = profile.display_name?.trim() || user.email || "Account";
+
   return (
-    <div className="min-h-screen p-8">
-      <header className="mb-6 flex items-center justify-between border-b pb-4">
-        <span className="text-sm text-muted-foreground">{user.email}</span>
-        <form action="/api/auth/signout" method="post">
-          <Button type="submit" variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-            Sign out
-          </Button>
-        </form>
-      </header>
-      {children}
+    <div className="flex min-h-screen">
+      <aside className="flex w-60 flex-col border-r border-border bg-muted/30">
+        <div className="flex h-14 items-center border-b border-border px-4">
+          <Link
+            href="/app"
+            className={cn(
+              "flex items-center gap-2 rounded px-1 py-1 text-sm font-semibold text-foreground",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            )}
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
+              SB
+            </span>
+            <span>Socialbud</span>
+          </Link>
+        </div>
+        <nav className="flex-1 space-y-0.5 p-3">
+          <Link
+            href="/app"
+            className="block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            Assistant
+          </Link>
+          <Link
+            href="/app/calendar"
+            className="block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            Calendar
+          </Link>
+          <Link
+            href="/app/posts"
+            className="block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            Posts
+          </Link>
+          <Link
+            href="/app/clips"
+            className="block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            Clips
+          </Link>
+          <Link
+            href="/app/image-gallery"
+            className="block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            Image Gallery
+          </Link>
+          <Link
+            href="/app/comments"
+            className="block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            Comments
+          </Link>
+          <Link
+            href="/app/settings"
+            className="block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            Settings
+          </Link>
+        </nav>
+        <div className="border-t border-border p-3 text-sm">
+          <p className="truncate font-medium">{displayName}</p>
+          {user.email && (
+            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+          )}
+          <form action="/api/auth/signout" method="post" className="mt-2">
+            <Button
+              type="submit"
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              Sign out
+            </Button>
+          </form>
+        </div>
+      </aside>
+      <main className="flex-1 p-8">{children}</main>
     </div>
   );
 }

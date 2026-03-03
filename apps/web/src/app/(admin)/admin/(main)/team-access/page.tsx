@@ -26,7 +26,7 @@ export default async function TeamAccessPage() {
         <CardHeader>
           <CardTitle>Add admin</CardTitle>
           <CardDescription>
-            Enter the email of an existing user to grant them admin access.
+            Search for a user by name or email, then add them as an admin.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -53,7 +53,9 @@ export default async function TeamAccessPage() {
                   key={a.user_id}
                   className="flex items-center justify-between px-3 py-2 text-sm"
                 >
-                  <span>{a.email ?? a.user_id}</span>
+                  <span className="truncate">
+                    {a.name ? `${a.name} · ${a.email ?? a.user_id}` : a.email ?? a.user_id}
+                  </span>
                   <RemoveAdminButton
                     userId={a.user_id}
                     disabled={a.user_id === currentUserId}
