@@ -54,9 +54,34 @@ To go straight to the app:
 
 In Supabase: **Authentication → URL Configuration → Redirect URLs**, add:
 
-- `http://localhost:3000/auth/callback` (and `/auth/set-password` if you want to allow direct links)
-- Production: `https://yourdomain.com/auth/callback`
+- `http://localhost:3000/auth/callback` (email templates)
+- `http://localhost:3000/auth/oauth-callback` (Google OAuth; "Continue with Google" redirects here)
+- `http://localhost:3000/auth/set-password` (optional, for direct links)
+- Production: same paths on your production origin (e.g. `https://yourdomain.com/auth/callback`, `https://yourdomain.com/auth/oauth-callback`)
 
 ## Site URL
 
 Set **Site URL** to your app (e.g. `http://localhost:3000` or your production URL). This is where Supabase redirects by default when no custom template is used.
+
+---
+
+## Google OAuth
+
+To enable sign-in and sign-up with Google:
+
+1. **Google Cloud Console**
+   - Create a project (or use an existing one) and enable the **Google+ API** / **Google Identity** (as required by your console).
+   - Go to **APIs & Services → Credentials** and create an **OAuth 2.0 Client ID** (application type: **Web application**).
+   - Add **Authorized redirect URIs**: `https://<YOUR_SUPABASE_PROJECT_REF>.supabase.co/auth/v1/callback` (find your project ref in Supabase → Settings → API).
+
+2. **Supabase Dashboard**
+   - **Authentication → Providers**: enable **Google** and paste the Client ID and Client Secret from the Google Cloud Console.
+   - **Authentication → URL Configuration**:
+     - **Site URL**: your app origin (e.g. `http://localhost:3000` for local, or your production URL).
+     - **Redirect URLs**: include `http://localhost:3000/auth/oauth-callback` (and production `https://yourdomain.com/auth/oauth-callback`). "Continue with Google" sends users to this URL with a `?code=`; the app exchanges it for a session then redirects to `/app` (and to `/onboarding` if profile is incomplete).
+   - No extra env vars are required in the app; Supabase uses the provider config from the dashboard.
+
+3. **Testing**
+   - **Login** (`/login`): Click "Continue with Google" → redirects to Google → after sign-in, you are sent back to the app. Existing users land in `/app`; new users (or users without a complete profile) are redirected to `/onboarding` by the app layout, then into `/app` after completing onboarding.
+   - **Signup** (`/signup`): Same "Continue with Google" flow; first-time users should complete onboarding (profile + individual org) as with email signup.
+   - **Email/password**: Sign in, sign up, and forgot-password flows should continue to work unchanged.

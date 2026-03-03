@@ -12,6 +12,7 @@ export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -29,40 +30,79 @@ export function LoginForm() {
     router.refresh();
   }
 
+  async function handleGoogleSignIn() {
+    setGoogleLoading(true);
+    setMessage(null);
+    const supabase = createClient();
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${origin}/auth/oauth-callback` },
+    });
+    if (error) {
+      setMessage(error.message);
+      setGoogleLoading(false);
+      return;
+    }
+    if (data?.url) window.location.href = data.url;
+    else setGoogleLoading(false);
+  }
+
+  const anyLoading = loading || googleLoading;
+
   return (
-    <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-      <Input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-      />
-      <Input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-      />
-      <p className="text-right text-sm">
-        <Link
-          href="/forgot-password"
-          className="text-primary underline-offset-4 hover:underline"
-        >
-          Forgot password?
-        </Link>
-      </p>
-      {message && <p className="text-sm text-destructive" role="alert">{message}</p>}
-      <Button type="submit" disabled={loading} className="w-full">
-        {loading ? "Signing in…" : "Sign in"}
+    <div className="mt-4 space-y-3">
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        disabled={anyLoading}
+        onClick={handleGoogleSignIn}
+      >
+        {googleLoading ? "Redirecting…" : "Continue with Google"}
       </Button>
+      <div className="relative my-4">
+        <span className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-border" />
+        </span>
+        <span className="relative flex justify-center text-xs uppercase tracking-wider text-muted-foreground">
+          <span className="bg-card px-2">or continue with</span>
+        </span>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <Input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <Input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        <p className="text-right text-sm">
+          <Link
+            href="/forgot-password"
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            Forgot password?
+          </Link>
+        </p>
+        {message && <p className="text-sm text-destructive" role="alert">{message}</p>}
+        <Button type="submit" disabled={anyLoading} className="w-full">
+          {loading ? "Signing in…" : "Sign in"}
+        </Button>
+      </form>
       <p className="text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
         <Link href="/signup" className="text-primary underline-offset-4 hover:underline">
           Sign up
         </Link>
       </p>
-    </form>
+    </div>
   );
 }

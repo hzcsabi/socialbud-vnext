@@ -10,6 +10,7 @@ export function SignupForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -27,6 +28,24 @@ export function SignupForm() {
     setSuccess(true);
   }
 
+  async function handleGoogleSignUp() {
+    setGoogleLoading(true);
+    setMessage(null);
+    const supabase = createClient();
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${origin}/auth/oauth-callback` },
+    });
+    if (error) {
+      setMessage(error.message);
+      setGoogleLoading(false);
+      return;
+    }
+    if (data?.url) window.location.href = data.url;
+    else setGoogleLoading(false);
+  }
+
   if (success) {
     return (
       <div className="mt-4 space-y-3">
@@ -40,36 +59,57 @@ export function SignupForm() {
     );
   }
 
+  const anyLoading = loading || googleLoading;
+
   return (
-    <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-      <Input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-      />
-      <Input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-      />
-      {message && (
-        <p className="text-sm text-destructive" role="alert">
-          {message}
-        </p>
-      )}
-      <Button type="submit" disabled={loading} className="w-full">
-        {loading ? "Creating account…" : "Create account"}
+    <div className="mt-4 space-y-3">
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        disabled={anyLoading}
+        onClick={handleGoogleSignUp}
+      >
+        {googleLoading ? "Redirecting…" : "Continue with Google"}
       </Button>
+      <div className="relative my-4">
+        <span className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-border" />
+        </span>
+        <span className="relative flex justify-center text-xs uppercase tracking-wider text-muted-foreground">
+          <span className="bg-card px-2">or continue with</span>
+        </span>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <Input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <Input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        {message && (
+          <p className="text-sm text-destructive" role="alert">
+            {message}
+          </p>
+        )}
+        <Button type="submit" disabled={anyLoading} className="w-full">
+          {loading ? "Creating account…" : "Create account"}
+        </Button>
+      </form>
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link href="/login" className="text-primary underline-offset-4 hover:underline">
           Sign in
         </Link>
       </p>
-    </form>
+    </div>
   );
 }

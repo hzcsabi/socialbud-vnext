@@ -5,10 +5,10 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 /**
- * Runs on the client when the URL contains Supabase auth tokens in the hash
- * (default email confirmation redirect). Parses the hash, sets the session
- * via the browser client (which persists to cookies with @supabase/ssr),
- * then redirects to /app.
+ * Runs on the client to complete Supabase auth redirects:
+ * 1. Hash (#access_token, #refresh_token) – email confirmation / magic link.
+ * 2. Query (?code=) – OAuth (e.g. Google) PKCE flow; exchange code for session.
+ * Sets the session in cookies then redirects to /app, /onboarding, or /auth/set-password.
  */
 export function AuthHashHandler() {
   const router = useRouter();
@@ -17,6 +17,30 @@ export function AuthHashHandler() {
 
   useEffect(() => {
     if (typeof window === "undefined" || handled.current) return;
+
+    const supabase = createClient();
+
+    // OAuth PKCE: Supabase redirects with ?code= (e.g. after Google sign-in)
+    const search = window.location.search || "";
+    const searchParams = new URLSearchParams(search);
+    const code = searchParams.get("code");
+    if (code) {
+      handled.current = true;
+      supabase.auth
+        .exchangeCodeForSession(code)
+        .then(() => {
+          const nextPath = "/app";
+          window.history.replaceState(null, "", pathname ?? "/");
+          router.push(nextPath);
+          router.refresh();
+        })
+        .catch(() => {
+          handled.current = false;
+        });
+      return;
+    }
+
+    // Hash: email confirmation / magic link
     const hash = window.location.hash?.replace(/^#/, "") || "";
     if (!hash) return;
     const params = new URLSearchParams(hash);
@@ -25,7 +49,6 @@ export function AuthHashHandler() {
     const type = params.get("type");
     if (!accessToken || !refreshToken) return;
     handled.current = true;
-    const supabase = createClient();
     const goToSetPassword = type === "recovery";
     const goToOnboarding = type === "signup" || type === "email";
     const nextPath = goToSetPassword
