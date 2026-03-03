@@ -1,12 +1,21 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { ConfigError } from "./config-error";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
+  let supabase;
+  try {
+    supabase = await createClient();
+  } catch (err) {
+    if (err instanceof Error && err.message === "Missing Supabase env vars") {
+      return <ConfigError />;
+    }
+    throw err;
+  }
   const {
     data: { user },
   } = await supabase.auth.getUser();
