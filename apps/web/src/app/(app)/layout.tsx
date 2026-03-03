@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
@@ -41,14 +42,23 @@ export default async function AppLayout({
           <Link
             href="/app"
             className={cn(
-              "flex items-center gap-2 rounded px-1 py-1 text-sm font-semibold text-foreground",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              "flex items-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             )}
           >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
-              SB
-            </span>
-            <span>Socialbud</span>
+            <Image
+              src="/app-logo-light.svg"
+              alt="Socialbud"
+              className="h-[1.6rem] w-auto dark:hidden"
+              width={120}
+              height={32}
+            />
+            <Image
+              src="/app-logo-dark.svg"
+              alt="Socialbud"
+              className="h-[1.6rem] w-auto hidden dark:block"
+              width={120}
+              height={32}
+            />
           </Link>
         </div>
         <nav className="flex-1 space-y-0.5 p-3">
@@ -75,6 +85,12 @@ export default async function AppLayout({
             className="block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
           >
             Clips
+          </Link>
+          <Link
+            href="/app/campaigns"
+            className="block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            Campaigns
           </Link>
           <Link
             href="/app/image-gallery"
