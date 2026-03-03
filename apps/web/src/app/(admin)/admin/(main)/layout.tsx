@@ -51,7 +51,7 @@ export default async function AdminMainLayout({
             />
           </Link>
         </div>
-        <nav className="flex-1 p-3 space-y-0.5">
+        <nav className="flex-1 space-y-0.5 p-3">
           <Link
             href="/admin/users"
             className={cn(
@@ -68,9 +68,70 @@ export default async function AdminMainLayout({
           >
             Team access
           </Link>
+          <Link
+            href="/admin/corporations"
+            className={cn(
+              "block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+            )}
+          >
+            Corporations
+          </Link>
+          <Link
+            href="/admin/pricing-plans"
+            className={cn(
+              "block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+            )}
+          >
+            Pricing Plans
+          </Link>
+          <div className="my-2 border-t border-border" />
+          <Link
+            href="/admin/templates"
+            className={cn(
+              "block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+            )}
+          >
+            Templates
+          </Link>
+          <Link
+            href="/admin/styles"
+            className={cn(
+              "block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+            )}
+          >
+            Styles
+          </Link>
+          <Link
+            href="/admin/global-image-gallery"
+            className={cn(
+              "block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+            )}
+          >
+            Global Image Gallery
+          </Link>
+          <div className="my-2 border-t border-border" />
+          <Link
+            href="/admin/analytics"
+            className={cn(
+              "block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+            )}
+          >
+            Analytics
+          </Link>
+          <Link
+            href="/admin/usage-logs"
+            className={cn(
+              "block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+            )}
+          >
+            Usage logs
+          </Link>
         </nav>
-        <div className="border-t border-border p-3">
-          <form action="/api/auth/signout?redirect=/admin/login" method="post">
+        <div className="border-t border-border p-3 text-sm">
+          <p className="truncate font-medium">
+            {user.email ?? "Admin"}
+          </p>
+          <form action="/api/auth/signout?redirect=/admin/login" method="post" className="mt-2">
             <Button
               type="submit"
               variant="ghost"
