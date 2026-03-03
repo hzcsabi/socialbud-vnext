@@ -1,6 +1,8 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { ConfigError } from "@/app/(app)/config-error";
 
 export default async function AdminMainLayout({
@@ -29,26 +31,38 @@ export default async function AdminMainLayout({
   if (!adminRow) redirect("/");
   return (
     <div className="flex min-h-screen">
-      <aside className="flex w-60 flex-col border-r border-gray-200 bg-gray-50">
-        <div className="flex h-14 items-center border-b border-gray-200 px-4">
-          <span className="font-semibold text-gray-900">Socialbud</span>
+      <aside className="flex w-60 flex-col border-r border-border bg-muted/30">
+        <div className="flex h-14 items-center border-b border-border px-4">
+          <Link href="/admin" className="flex items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded">
+            <img
+              src="/admin-logo.svg"
+              alt="Socialbud"
+              className="h-[1.6rem] w-auto"
+              width={120}
+              height={32}
+            />
+          </Link>
         </div>
         <nav className="flex-1 p-3">
           <Link
             href="/admin/team-access"
-            className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-200"
+            className={cn(
+              "block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+            )}
           >
             Team access
           </Link>
         </nav>
-        <div className="border-t border-gray-200 p-3">
+        <div className="border-t border-border p-3">
           <form action="/api/auth/signout?redirect=/admin/login" method="post">
-            <button
+            <Button
               type="submit"
-              className="w-full rounded-md px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
             >
               Log out
-            </button>
+            </Button>
           </form>
         </div>
       </aside>

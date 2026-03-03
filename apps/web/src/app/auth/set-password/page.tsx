@@ -1,6 +1,13 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ConfigError } from "@/app/(app)/config-error";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { SetPasswordForm } from "./set-password-form";
 
 export default async function SetPasswordPage() {
@@ -24,13 +31,17 @@ export default async function SetPasswordPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-lg border p-6">
-        <h1 className="text-lg font-semibold">Set your password</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          Choose a password to sign in to your account.
-        </p>
-        <SetPasswordForm />
-      </div>
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle>Set your password</CardTitle>
+          <CardDescription>
+            Choose a password to sign in to your account.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SetPasswordForm />
+        </CardContent>
+      </Card>
     </main>
   );
 }

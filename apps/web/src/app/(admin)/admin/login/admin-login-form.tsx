@@ -3,6 +3,8 @@
 import { createClient } from "@/lib/supabase/browser";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export function AdminLoginForm() {
   const router = useRouter();
@@ -28,30 +30,24 @@ export function AdminLoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-      <input
+      <Input
         type="email"
         placeholder="Email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="w-full rounded border px-3 py-2"
         required
       />
-      <input
+      <Input
         type="password"
         placeholder="Password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="w-full rounded border px-3 py-2"
         required
       />
-      {message && <p className="text-sm text-red-600">{message}</p>}
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded bg-black py-2 text-white disabled:opacity-50"
-      >
+      {message && <p className="text-sm text-destructive" role="alert">{message}</p>}
+      <Button type="submit" disabled={loading} className="w-full">
         {loading ? "Signing in…" : "Sign in"}
-      </button>
+      </Button>
     </form>
   );
 }

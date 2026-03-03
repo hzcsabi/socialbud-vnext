@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import { removeAdmin } from "./actions";
 
 type Props = { userId: string; disabled?: boolean };
@@ -16,13 +17,15 @@ export function RemoveAdminButton({ userId, disabled }: Props) {
   }
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="sm"
       onClick={handleClick}
       disabled={disabled}
-      className="text-sm text-red-600 hover:underline disabled:opacity-50"
+      className="text-destructive hover:text-destructive hover:bg-destructive/10"
     >
       Remove
-    </button>
+    </Button>
   );
 }

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { Button } from "@/components/ui/button";
 import { ConfigError } from "./config-error";
 
 export default async function AppLayout({
@@ -23,11 +24,11 @@ export default async function AppLayout({
   return (
     <div className="min-h-screen p-8">
       <header className="mb-6 flex items-center justify-between border-b pb-4">
-        <span className="text-sm text-gray-600">{user.email}</span>
+        <span className="text-sm text-muted-foreground">{user.email}</span>
         <form action="/api/auth/signout" method="post">
-          <button type="submit" className="text-sm text-red-600 hover:underline">
+          <Button type="submit" variant="ghost" size="sm" className="text-destructive hover:text-destructive">
             Sign out
-          </button>
+          </Button>
         </form>
       </header>
       {children}

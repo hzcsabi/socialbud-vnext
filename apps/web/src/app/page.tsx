@@ -1,16 +1,23 @@
 import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function HomePage() {
   return (
     <main className="min-h-screen p-8">
       <h1 className="text-2xl font-bold">Socialbud</h1>
-      <p className="mt-2 text-gray-600">Marketing home. vNext monorepo.</p>
-      <Link
-        href="/app"
-        className="mt-4 inline-block rounded bg-black px-4 py-2 text-white hover:bg-gray-800"
-      >
-        Go to app
-      </Link>
+      <p className="mt-2 text-muted-foreground">Marketing home. vNext monorepo.</p>
+      <div className="mt-4 flex gap-3">
+        <Link href="/app" className={cn(buttonVariants())}>
+          Go to app
+        </Link>
+        <Link
+          href="/components"
+          className={cn(buttonVariants({ variant: "outline" }))}
+        >
+          Component library
+        </Link>
+      </div>
     </main>
   );
 }

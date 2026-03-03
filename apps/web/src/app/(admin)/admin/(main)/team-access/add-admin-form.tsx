@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { addAdminByEmail } from "./actions";
 
 export function AddAdminForm() {
@@ -15,25 +17,20 @@ export function AddAdminForm() {
   return (
     <form action={formAction} className="mt-4 flex flex-wrap items-end gap-2">
       <label className="flex flex-1 min-w-[200px] flex-col gap-1">
-        <span className="text-sm font-medium text-gray-700">Email</span>
-        <input
+        <span className="text-sm font-medium text-muted-foreground">Email</span>
+        <Input
           type="email"
           name="email"
           placeholder="user@example.com"
-          className="rounded border border-gray-300 px-3 py-2 text-sm"
           required
           disabled={isPending}
         />
       </label>
-      <button
-        type="submit"
-        disabled={isPending}
-        className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
-      >
+      <Button type="submit" disabled={isPending}>
         {isPending ? "Adding…" : "Add admin"}
-      </button>
+      </Button>
       {state?.error && (
-        <p className="w-full text-sm text-red-600" role="alert">
+        <p className="w-full text-sm text-destructive" role="alert">
           {state.error}
         </p>
       )}

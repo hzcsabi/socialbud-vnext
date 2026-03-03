@@ -1,6 +1,12 @@
 import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/admin";
 import { ConfigError } from "@/app/(app)/config-error";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { AdminLoginForm } from "./admin-login-form";
 
 export default async function AdminLoginPage() {
@@ -20,10 +26,14 @@ export default async function AdminLoginPage() {
   if (admin) redirect("/admin");
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-lg border p-6">
-        <h1 className="text-lg font-semibold">Admin sign in</h1>
-        <AdminLoginForm />
-      </div>
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle>Admin sign in</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AdminLoginForm />
+        </CardContent>
+      </Card>
     </main>
   );
 }

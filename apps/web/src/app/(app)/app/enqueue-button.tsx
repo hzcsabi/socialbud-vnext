@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 export function EnqueueButton() {
   const [result, setResult] = useState<string | null>(null);
@@ -25,15 +26,15 @@ export function EnqueueButton() {
 
   return (
     <div className="mt-4">
-      <button
+      <Button
         type="button"
+        variant="secondary"
         onClick={handleEnqueue}
         disabled={loading}
-        className="rounded bg-gray-800 px-4 py-2 text-white hover:bg-gray-700 disabled:opacity-50"
       >
         {loading ? "Enqueueing…" : "Enqueue demo job"}
-      </button>
-      {result && <p className="mt-2 text-sm text-gray-600">{result}</p>}
+      </Button>
+      {result && <p className="mt-2 text-sm text-muted-foreground">{result}</p>}
     </div>
   );
 }

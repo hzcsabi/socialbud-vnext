@@ -3,6 +3,8 @@
 import { createClient } from "@/lib/supabase/browser";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export function SetPasswordForm() {
   const router = useRouter();
@@ -36,34 +38,28 @@ export function SetPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-      <input
+      <Input
         type="password"
         placeholder="New password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="w-full rounded border px-3 py-2"
         required
         minLength={6}
         autoComplete="new-password"
       />
-      <input
+      <Input
         type="password"
         placeholder="Confirm password"
         value={confirm}
         onChange={(e) => setConfirm(e.target.value)}
-        className="w-full rounded border px-3 py-2"
         required
         minLength={6}
         autoComplete="new-password"
       />
-      {message && <p className="text-sm text-red-600">{message}</p>}
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded bg-black py-2 text-white disabled:opacity-50"
-      >
+      {message && <p className="text-sm text-destructive" role="alert">{message}</p>}
+      <Button type="submit" disabled={loading} className="w-full">
         {loading ? "Setting password…" : "Set password"}
-      </button>
+      </Button>
     </form>
   );
 }

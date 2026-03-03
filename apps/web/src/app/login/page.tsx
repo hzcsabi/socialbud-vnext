@@ -1,6 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ConfigError } from "../(app)/config-error";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage({
@@ -30,15 +36,19 @@ export default async function LoginPage({
 
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-lg border p-6">
-        <h1 className="text-lg font-semibold">Sign in</h1>
-        {urlError && (
-          <p className="mt-2 text-sm text-red-600" role="alert">
-            {decodeURIComponent(urlError)}
-          </p>
-        )}
-        <LoginForm />
-      </div>
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle>Sign in</CardTitle>
+          {urlError && (
+            <p className="text-sm text-destructive" role="alert">
+              {decodeURIComponent(urlError)}
+            </p>
+          )}
+        </CardHeader>
+        <CardContent>
+          <LoginForm />
+        </CardContent>
+      </Card>
     </main>
   );
 }
