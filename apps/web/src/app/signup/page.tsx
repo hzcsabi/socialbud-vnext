@@ -31,7 +31,7 @@ export default async function SignupPage() {
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm">
-        <CardHeader>
+        <CardHeader className="text-center">
           <CardTitle>Create an account</CardTitle>
         </CardHeader>
         <CardContent>

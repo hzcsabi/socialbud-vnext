@@ -37,7 +37,7 @@ export default async function LoginPage({
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm">
-        <CardHeader>
+        <CardHeader className="text-center">
           <CardTitle>Sign in</CardTitle>
           {urlError && (
             <p className="text-sm text-destructive" role="alert">

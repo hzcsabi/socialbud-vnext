@@ -4,19 +4,17 @@ import { cn } from "@/lib/utils";
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen p-8">
-      <h1 className="text-2xl font-bold">Socialbud</h1>
-      <p className="mt-2 text-muted-foreground">Marketing home. vNext monorepo.</p>
-      <div className="mt-4 flex gap-3">
-        <Link href="/app" className={cn(buttonVariants())}>
-          Go to app
-        </Link>
-        <Link
-          href="/components"
-          className={cn(buttonVariants({ variant: "outline" }))}
-        >
-          Component library
-        </Link>
+    <main className="flex min-h-screen items-center justify-center p-8">
+      <div className="text-center space-y-3">
+        <h1 className="text-3xl font-bold tracking-tight">Socialbud Website</h1>
+        <p className="text-muted-foreground">
+          This will be the fancy new website.
+        </p>
+        <div className="pt-2">
+          <Link href="/app" className={cn(buttonVariants())}>
+            Sign in
+          </Link>
+        </div>
       </div>
     </main>
   );

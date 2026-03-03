@@ -72,11 +72,11 @@ export function SignupForm() {
       >
         {googleLoading ? "Redirecting…" : "Continue with Google"}
       </Button>
-      <div className="relative my-4">
+      <div className="relative my-6">
         <span className="absolute inset-0 flex items-center">
           <span className="w-full border-t border-border" />
         </span>
-        <span className="relative flex justify-center text-xs uppercase tracking-wider text-muted-foreground">
+        <span className="relative flex justify-center text-xs uppercase tracking-wider text-muted-foreground py-[9px]">
           <span className="bg-card px-2">or continue with</span>
         </span>
       </div>
@@ -104,7 +104,7 @@ export function SignupForm() {
           {loading ? "Creating account…" : "Create account"}
         </Button>
       </form>
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="mt-4 text-center text-sm text-muted-foreground py-[5px]">
         Already have an account?{" "}
         <Link href="/login" className="text-primary underline-offset-4 hover:underline">
           Sign in
