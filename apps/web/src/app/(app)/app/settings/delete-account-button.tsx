@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -13,12 +12,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { removeAdmin } from "./actions";
+import { deleteAccount } from "./actions";
 
-type Props = { userId: string; disabled?: boolean };
-
-export function RemoveAdminButton({ userId, disabled }: Props) {
-  const router = useRouter();
+export function DeleteAccountButton() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,35 +22,32 @@ export function RemoveAdminButton({ userId, disabled }: Props) {
   async function handleConfirm() {
     setLoading(true);
     setError(null);
-    const { error } = await removeAdmin(userId);
+    const result = await deleteAccount();
     setLoading(false);
     setOpen(false);
-    if (error) {
-      setError(error);
+    if (result.error) {
+      setError(result.error);
       return;
     }
-    router.refresh();
+    window.location.href = "/api/auth/signout?redirect=/";
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="flex flex-col gap-1">
       <AlertDialog open={open} onOpenChange={(value) => setOpen(value === true)}>
         <Button
           type="button"
-          variant="ghost"
-          size="sm"
+          variant="destructive"
           onClick={() => setOpen(true)}
-          disabled={disabled || loading}
-          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+          disabled={loading}
         >
-          {loading ? "Removing…" : "Remove"}
+          {loading ? "Deleting…" : "Delete account"}
         </Button>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove admin</AlertDialogTitle>
+            <AlertDialogTitle>Delete account</AlertDialogTitle>
             <AlertDialogDescription>
-              Remove this user&apos;s admin access? They will no longer be able to access the admin
-              area but will still keep their regular account.
+              Permanently delete your account and all associated data? This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -67,19 +60,16 @@ export function RemoveAdminButton({ userId, disabled }: Props) {
               disabled={loading}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {loading ? "Removing…" : "Remove"}
+              {loading ? "Deleting…" : "Delete account"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      {error ? (
-        <p
-          role="alert"
-          className="text-xs max-w-[220px] text-right text-destructive"
-        >
+      {error && (
+        <p className="text-sm text-destructive" role="alert">
           {error}
         </p>
-      ) : null}
+      )}
     </div>
   );
 }

@@ -47,7 +47,7 @@ export function DeleteUserButton({ userId, email, disabled }: Props) {
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialog open={open} onOpenChange={(value) => setOpen(value === true)}>
         <Button
           type="button"
           variant="ghost"

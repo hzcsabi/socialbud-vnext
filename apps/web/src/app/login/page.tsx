@@ -9,10 +9,14 @@ import {
 } from "@/components/ui/card";
 import { LoginForm } from "./login-form";
 
+function isAllowedRedirect(path: string): boolean {
+  return /^\/[^:]*$/.test(path ?? "");
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; next?: string }>;
 }) {
   let supabase;
   try {
@@ -30,23 +34,29 @@ export default async function LoginPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (user) redirect("/app");
+  if (user) {
+    const params = await searchParams;
+    const nextPath = params.next?.trim();
+    const destination = nextPath && isAllowedRedirect(nextPath) ? nextPath : "/app";
+    redirect(destination);
+  }
 
-  const { error: urlError } = await searchParams;
+  const params = await searchParams;
+  const nextUrl = params.next?.trim() && isAllowedRedirect(params.next!.trim()) ? params.next!.trim() : undefined;
 
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle>Sign in</CardTitle>
-          {urlError && (
+          {params.error && (
             <p className="text-sm text-destructive" role="alert">
-              {decodeURIComponent(urlError)}
+              {decodeURIComponent(params.error)}
             </p>
           )}
         </CardHeader>
         <CardContent>
-          <LoginForm />
+          <LoginForm nextUrl={nextUrl} />
         </CardContent>
       </Card>
     </main>

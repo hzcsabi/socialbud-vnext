@@ -7,7 +7,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export function LoginForm() {
+type Props = { nextUrl?: string };
+
+export function LoginForm({ nextUrl }: Props) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,7 +28,7 @@ export function LoginForm() {
       setMessage(error.message);
       return;
     }
-    router.push("/app");
+    router.push(nextUrl ?? "/app");
     router.refresh();
   }
 
@@ -35,9 +37,12 @@ export function LoginForm() {
     setMessage(null);
     const supabase = createClient();
     const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const redirectTo = nextUrl
+      ? `${origin}/auth/oauth-callback?next=${encodeURIComponent(nextUrl)}`
+      : `${origin}/auth/oauth-callback`;
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${origin}/auth/oauth-callback` },
+      options: { redirectTo },
     });
     if (error) {
       setMessage(error.message);

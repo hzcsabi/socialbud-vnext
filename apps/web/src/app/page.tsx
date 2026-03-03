@@ -10,9 +10,15 @@ export default function HomePage() {
         <p className="text-muted-foreground">
           This will be the fancy new website.
         </p>
-        <div className="pt-2">
+        <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
           <Link href="/app" className={cn(buttonVariants())}>
             Sign in
+          </Link>
+          <Link
+            href="/admin"
+            className={cn(buttonVariants({ variant: "outline" }))}
+          >
+            Admin
           </Link>
         </div>
       </div>

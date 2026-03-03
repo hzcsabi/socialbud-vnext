@@ -23,6 +23,8 @@ function OAuthCallbackContent() {
       setError("Missing code");
       return;
     }
+    const nextPath = searchParams.get("next")?.trim();
+    const allowed = nextPath && /^\/[^:]*$/.test(nextPath) ? nextPath : "/app";
     handled.current = true;
 
     const timeoutId = window.setTimeout(() => {
@@ -34,7 +36,7 @@ function OAuthCallbackContent() {
       .exchangeCodeForSession(code)
       .then(() => {
         window.clearTimeout(timeoutId);
-        window.location.replace("/app");
+        window.location.replace(allowed);
       })
       .catch((err) => {
         window.clearTimeout(timeoutId);

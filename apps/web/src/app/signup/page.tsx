@@ -7,9 +7,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { getInvitationByToken } from "@/app/invite/accept/actions";
 import { SignupForm } from "./signup-form";
 
-export default async function SignupPage() {
+type Props = {
+  searchParams: Promise<{ invitation?: string }>;
+};
+
+export default async function SignupPage({ searchParams }: Props) {
   let supabase;
   try {
     supabase = await createClient();
@@ -28,6 +33,14 @@ export default async function SignupPage() {
   } = await supabase.auth.getUser();
   if (user) redirect("/app");
 
+  const params = await searchParams;
+  const invitationToken = params.invitation?.trim() ?? "";
+  let initialEmail: string | undefined;
+  if (invitationToken) {
+    const inv = await getInvitationByToken(invitationToken);
+    if (inv.valid && inv.email) initialEmail = inv.email;
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm">
@@ -35,7 +48,10 @@ export default async function SignupPage() {
           <CardTitle>Create an account</CardTitle>
         </CardHeader>
         <CardContent>
-          <SignupForm />
+          <SignupForm
+            initialEmail={initialEmail}
+            invitationToken={invitationToken || undefined}
+          />
         </CardContent>
       </Card>
     </main>

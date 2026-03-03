@@ -6,8 +6,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export function SignupForm() {
-  const [email, setEmail] = useState("");
+type Props = {
+  initialEmail?: string;
+  invitationToken?: string;
+};
+
+export function SignupForm({ initialEmail, invitationToken }: Props) {
+  const [email, setEmail] = useState(initialEmail ?? "");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -23,6 +28,10 @@ export function SignupForm() {
     setLoading(false);
     if (error) {
       setMessage(error.message);
+      return;
+    }
+    if (invitationToken) {
+      window.location.href = `/invite/accept?token=${encodeURIComponent(invitationToken)}`;
       return;
     }
     setSuccess(true);
@@ -92,6 +101,7 @@ export function SignupForm() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          readOnly={!!initialEmail}
           required
         />
         <Input

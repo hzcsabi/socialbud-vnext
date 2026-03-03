@@ -34,6 +34,41 @@ export async function sendEmail(params: {
 }
 
 /**
+ * Send a workspace invitation email. acceptLink should be the full URL to accept (e.g. /invite/accept?token=X).
+ */
+export async function sendInvitationEmail(params: {
+  to: string;
+  inviterDisplayName: string;
+  organizationName: string;
+  acceptLink: string;
+}): Promise<{ sent: boolean; error?: string }> {
+  const { to, inviterDisplayName, organizationName, acceptLink } = params;
+  const subject = `You're invited to join ${organizationName} on Socialbud`;
+  const html = `
+    <p>Hello,</p>
+    <p><strong>${escapeHtml(inviterDisplayName || "A teammate")}</strong> has invited you to join the workspace <strong>${escapeHtml(organizationName)}</strong> on Socialbud.</p>
+    <p><a href="${escapeHtml(acceptLink)}" style="display: inline-block; padding: 10px 20px; background: #000; color: #fff; text-decoration: none; border-radius: 6px;">Accept invitation</a></p>
+    <p>Or copy this link: ${escapeHtml(acceptLink)}</p>
+    <p>— The Socialbud team</p>
+  `;
+  const text = [
+    "Hello,",
+    `${inviterDisplayName || "A teammate"} has invited you to join the workspace ${organizationName} on Socialbud.`,
+    `Accept invitation: ${acceptLink}`,
+    "— The Socialbud team",
+  ].join("\n");
+  return sendEmail({ to, subject, html, text });
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
  * Notify a user that their Socialbud account has been deleted (admin action).
  */
 export async function sendAccountDeletedEmail(to: string): Promise<{
