@@ -362,9 +362,7 @@ export async function listAccountsForAdmin(): Promise<{
 }
 
 /**
- * Delete an account (admin only). Cascades to account_members, account_invitations,
- * account_billing; children become top-level (parent_account_id set to NULL).
- * Blocks if the current admin is a member of the account to avoid lockout.
+ * Soft-delete an account (admin only). Sets accounts.deleted_at. Data preserved for analytics.
  */
 export async function deleteAccountAsAdmin(
   accountId: string,
@@ -374,15 +372,6 @@ export async function deleteAccountAsAdmin(
   if (!admin) return { error: "Unauthorized" };
 
   const supabase = createServiceRoleClient();
-
-  const { data: membership } = await supabase
-    .from("account_members")
-    .select("id")
-    .eq("account_id", accountId)
-    .eq("user_id", admin.user.id)
-    .maybeSingle();
-  if (membership) return { error: "You cannot delete an account you are a member of" };
-
   const now = new Date().toISOString();
   const { error } = await supabase
     .from("accounts")
