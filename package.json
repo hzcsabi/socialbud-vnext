@@ -11,9 +11,9 @@
     "lint": "pnpm -r run lint"
   },
   "engines": {
-    "node": ">=20"
+    "node": "20.x"
   },
-  "packageManager": "pnpm@9.14.2",
+  "packageManager": "pnpm@10.0.0",
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.15",
     "next": "^15.0.3",
