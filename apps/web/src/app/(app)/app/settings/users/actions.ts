@@ -7,17 +7,9 @@ import {
   ensureCurrentUserAccount,
 } from "@/lib/account";
 import { sendInvitationEmail } from "@/lib/email";
+import { getAppOrigin } from "@/lib/app-url";
 
 const INVITATION_EXPIRY_DAYS = 7;
-
-function appOrigin(): string {
-  return (
-    process.env["NEXT_PUBLIC_APP_URL"] ??
-    (typeof process.env["VERCEL_URL"] !== "undefined"
-      ? `https://${process.env["VERCEL_URL"]}`
-      : "http://localhost:3000")
-  );
-}
 
 async function ensureOwnerOrManager(accountId: string): Promise<boolean> {
   const account = await getCurrentUserAccount();
@@ -187,7 +179,7 @@ export async function createInvitation(
       .eq("user_id", authUser.id)
       .maybeSingle();
 
-    const acceptLink = `${appOrigin()}/invite/accept?token=${encodeURIComponent(token)}`;
+    const acceptLink = `${getAppOrigin()}/invite/accept?token=${encodeURIComponent(token)}`;
     const { sent, error: emailError } = await sendInvitationEmail({
       to: trimmed,
       inviterDisplayName: profile?.display_name ?? authUser.email ?? "A teammate",
@@ -300,7 +292,7 @@ export async function resendInvitation(
     .eq("user_id", authUser.id)
     .maybeSingle();
 
-  const acceptLink = `${appOrigin()}/invite/accept?token=${encodeURIComponent(row.token)}`;
+  const acceptLink = `${getAppOrigin()}/invite/accept?token=${encodeURIComponent(row.token)}`;
   const { sent, error: emailError } = await sendInvitationEmail({
     to: row.email,
     inviterDisplayName: profile?.display_name ?? authUser.email ?? "A teammate",
