@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { getAdminUser } from "@/lib/admin";
 import { sendAccountDeletedEmail } from "@/lib/email";
 import { createServiceRoleClient } from "@/lib/supabase/server-admin";
@@ -72,7 +73,7 @@ export async function listUsersForAdmin(): Promise<{
     const userIds = authUsers.map((u) => u.id);
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("user_id, display_name, website")
+      .select("user_id, display_name, website, suspended_at")
       .in("user_id", userIds);
 
     const profileByUserId = new Map(
@@ -131,7 +132,9 @@ export async function listUsersForAdmin(): Promise<{
     const users: UserListEntry[] = authUsers.map((u) => {
       const profile = profileByUserId.get(u.id);
       let status: UserListEntry["status"] = "active";
-      if (u.banned_until && new Date(u.banned_until) > now) status = "suspended";
+      const profileSuspended = profile?.suspended_at && new Date(profile.suspended_at) > now;
+      const authSuspended = u.banned_until && new Date(u.banned_until) > now;
+      if (profileSuspended || authSuspended) status = "suspended";
       else if (!u.email_confirmed_at) status = "pending";
 
       const memberships = membersByUserId.get(u.id) ?? [];
@@ -217,10 +220,12 @@ export async function listAccountsForAdmin(): Promise<{
     if (allUserIds.length > 0) {
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("user_id, display_name")
+        .select("user_id, display_name, suspended_at")
         .in("user_id", allUserIds);
+      const suspendedAtByUserId = new Map<string, string>();
       for (const p of profiles ?? []) {
         nameByUserId.set(p.user_id, p.display_name ?? null);
+        if (p.suspended_at) suspendedAtByUserId.set(p.user_id, p.suspended_at);
       }
       const {
         data: { users: authUsers },
@@ -229,7 +234,9 @@ export async function listAccountsForAdmin(): Promise<{
       for (const u of authUsers ?? []) {
         if (u.email) emailByUserId.set(u.id, u.email);
         let status: UserStatus = "active";
-        if (u.banned_until && new Date(u.banned_until) > now) status = "suspended";
+        const profileSuspended = suspendedAtByUserId.has(u.id) && new Date(suspendedAtByUserId.get(u.id)!) > now;
+        const authSuspended = u.banned_until && new Date(u.banned_until) > now;
+        if (profileSuspended || authSuspended) status = "suspended";
         else if (!u.email_confirmed_at) status = "pending";
         statusByUserId.set(u.id, status);
       }
@@ -658,7 +665,8 @@ export async function removeMemberFromAccountAsAdmin(
 }
 
 /**
- * Suspend a user (admin only). Sets banned_until so they cannot sign in. Does not delete the user.
+ * Suspend a user (admin only). Sets profiles.suspended_at so status shows as suspended in admin UI.
+ * Does not delete the user. Optionally also sets auth banned_until to block sign-in.
  */
 export async function suspendUserAsAdmin(userId: string): Promise<{ error?: string }> {
   const admin = await getAdminUser();
@@ -668,10 +676,45 @@ export async function suspendUserAsAdmin(userId: string): Promise<{ error?: stri
   const supabase = createServiceRoleClient();
   const bannedUntil = new Date();
   bannedUntil.setFullYear(bannedUntil.getFullYear() + 10);
-  const { error } = await supabase.auth.admin.updateUserById(userId, {
-    banned_until: bannedUntil.toISOString(),
+  const iso = bannedUntil.toISOString();
+  const now = new Date().toISOString();
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .upsert(
+      { user_id: userId, suspended_at: iso, updated_at: now },
+      { onConflict: "user_id" }
+    );
+  if (profileError) return { error: profileError.message };
+
+  await supabase.auth.admin.updateUserById(userId, {
+    banned_until: iso,
   });
-  if (error) return { error: error.message };
+  revalidatePath("/admin/users");
+  return {};
+}
+
+/**
+ * Unsuspend a user (admin only). Clears profiles.suspended_at and auth banned_until.
+ */
+export async function unsuspendUserAsAdmin(userId: string): Promise<{ error?: string }> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: "Unauthorized" };
+  if (admin.user.id === userId) return { error: "You cannot change your own account" };
+
+  const supabase = createServiceRoleClient();
+  const now = new Date().toISOString();
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update({ suspended_at: null, updated_at: now })
+    .eq("user_id", userId);
+  if (profileError) return { error: profileError.message };
+
+  await supabase.auth.admin.updateUserById(userId, {
+    banned_until: null,
+  });
+  revalidatePath("/admin/users");
   return {};
 }
 

@@ -38,6 +38,7 @@ export type {
 } from "./schema/account_members.js";
 export {
   createProfilesTableSql,
+  alterProfilesAddSuspendedAtSql,
   enableRlsProfilesSql,
   PROFILES_TABLE,
 } from "./schema/profiles.js";

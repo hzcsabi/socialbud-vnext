@@ -16,8 +16,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ManageUserAccountsModal } from "./manage-user-accounts-modal";
 import { DeleteUserButton } from "./delete-user-button";
-import { suspendUserAsAdmin, setAccountMemberRoleAsAdmin } from "./actions";
-import type { AccountListEntry, MemberRole } from "./actions";
+import { suspendUserAsAdmin, unsuspendUserAsAdmin, setAccountMemberRoleAsAdmin } from "./actions";
+import type { AccountListEntry, MemberRole, UserStatus } from "./actions";
 import { cn } from "@/lib/utils";
 
 const ROLES: MemberRole[] = ["owner", "admin", "member"];
@@ -38,6 +38,8 @@ function roleLabel(role: MemberRole) {
 type Props = {
   userId: string;
   email: string | null;
+  /** Used to show Suspend vs Unsuspend. */
+  status?: UserStatus;
   disabled?: boolean;
   fromAccountId?: string;
   fromAccountName?: string;
@@ -50,6 +52,7 @@ type Props = {
 export function UserRowActionsMenu({
   userId,
   email,
+  status,
   disabled,
   fromAccountId,
   fromAccountName,
@@ -58,6 +61,7 @@ export function UserRowActionsMenu({
   currentAccountIds = [],
 }: Props) {
   const router = useRouter();
+  const isSuspended = status === "suspended";
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
   const [manageAccountsOpen, setManageAccountsOpen] = useState(false);
@@ -67,6 +71,10 @@ export function UserRowActionsMenu({
   const [selectedRole, setSelectedRole] = useState<MemberRole>("member");
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [suspendLoading, setSuspendLoading] = useState(false);
+  const [suspendError, setSuspendError] = useState<string | null>(null);
+  const [unsuspendOpen, setUnsuspendOpen] = useState(false);
+  const [unsuspendLoading, setUnsuspendLoading] = useState(false);
+  const [unsuspendError, setUnsuspendError] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -95,10 +103,27 @@ export function UserRowActionsMenu({
 
   async function handleSuspendConfirm() {
     setSuspendLoading(true);
+    setSuspendError(null);
     const result = await suspendUserAsAdmin(userId);
     setSuspendLoading(false);
+    if (result.error) {
+      setSuspendError(result.error);
+      return;
+    }
     setSuspendOpen(false);
-    if (result.error) return;
+    router.refresh();
+  }
+
+  async function handleUnsuspendConfirm() {
+    setUnsuspendLoading(true);
+    setUnsuspendError(null);
+    const result = await unsuspendUserAsAdmin(userId);
+    setUnsuspendLoading(false);
+    if (result.error) {
+      setUnsuspendError(result.error);
+      return;
+    }
+    setUnsuspendOpen(false);
     router.refresh();
   }
 
@@ -163,14 +188,35 @@ export function UserRowActionsMenu({
           Change role
         </button>
       )}
-      <button
-        type="button"
-        role="menuitem"
-        className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
-        onClick={() => closeAnd(() => setSuspendOpen(true))}
-      >
-        Suspend
-      </button>
+      {isSuspended ? (
+        <button
+          type="button"
+          role="menuitem"
+          className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
+          onClick={() => {
+            closeAnd(() => {
+              setUnsuspendError(null);
+              setUnsuspendOpen(true);
+            });
+          }}
+        >
+          Unsuspend
+        </button>
+      ) : (
+        <button
+          type="button"
+          role="menuitem"
+          className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
+          onClick={() => {
+            closeAnd(() => {
+              setSuspendError(null);
+              setSuspendOpen(true);
+            });
+          }}
+        >
+          Suspend
+        </button>
+      )}
       <button
         type="button"
         role="menuitem"
@@ -253,7 +299,7 @@ export function UserRowActionsMenu({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <AlertDialog open={suspendOpen} onOpenChange={(v) => setSuspendOpen(v === true)}>
+      <AlertDialog open={suspendOpen} onOpenChange={(v) => { setSuspendOpen(v === true); if (!v) setSuspendError(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Suspend user</AlertDialogTitle>
@@ -261,16 +307,44 @@ export function UserRowActionsMenu({
               Suspend this user? They will not be able to sign in until unsuspended. Their data is preserved.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {suspendError && (
+            <p className="text-sm text-destructive px-6">{suspendError}</p>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={suspendLoading}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
-                handleSuspendConfirm();
+                void handleSuspendConfirm();
               }}
               disabled={suspendLoading}
             >
               {suspendLoading ? "Suspending…" : "Suspend"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={unsuspendOpen} onOpenChange={(v) => { setUnsuspendOpen(v === true); if (!v) setUnsuspendError(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsuspend user</AlertDialogTitle>
+            <AlertDialogDescription>
+              Restore this user&apos;s access? They will be able to sign in again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {unsuspendError && (
+            <p className="text-sm text-destructive px-6">{unsuspendError}</p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={unsuspendLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void handleUnsuspendConfirm();
+              }}
+              disabled={unsuspendLoading}
+            >
+              {unsuspendLoading ? "Unsuspending…" : "Unsuspend"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,3 +1,9 @@
+import { config } from "dotenv";
+import { resolve } from "path";
+// When run via "pnpm db:migrate", cwd is apps/brain; load .env from likely locations
+config(); // apps/brain/.env
+config({ path: resolve(process.cwd(), "../../.env"), override: false }); // repo root
+config({ path: resolve(process.cwd(), "../web/.env"), override: false }); // apps/web/.env
 import {
   createDbClient,
   createJobsTableSql,
@@ -6,6 +12,7 @@ import {
   createAccountsTableSql,
   createAccountMembersTableSql,
   createProfilesTableSql,
+  alterProfilesAddSuspendedAtSql,
   createSubscriptionsTableSql,
   enableRlsBillingAccountsSql,
   enableRlsAccountBillingSql,
@@ -24,6 +31,7 @@ const migrations: { name: string; sql: string }[] = [
   { name: "accounts", sql: createAccountsTableSql },
   { name: "account_members", sql: createAccountMembersTableSql },
   { name: "profiles", sql: createProfilesTableSql },
+  { name: "profiles suspended_at", sql: alterProfilesAddSuspendedAtSql },
   { name: "account_billing", sql: createAccountBillingTableSql },
   { name: "subscriptions", sql: createSubscriptionsTableSql },
   { name: "billing_accounts RLS", sql: enableRlsBillingAccountsSql },

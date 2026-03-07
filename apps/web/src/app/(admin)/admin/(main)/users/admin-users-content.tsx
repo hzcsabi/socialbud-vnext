@@ -322,6 +322,7 @@ export function AdminUsersContent({
                           <UserRowActionsMenu
                             userId={u.id}
                             email={u.email}
+                            status={u.status}
                             disabled={u.id === currentUserId}
                             accounts={accounts}
                             currentAccountIds={u.accounts.map((a) => a.accountId)}
@@ -538,6 +539,7 @@ export function AdminUsersContent({
                                           <UserRowActionsMenu
                                             userId={m.userId}
                                             email={m.email || m.userId}
+                                            status={m.status}
                                             fromAccountId={a.id}
                                             fromAccountName={a.name}
                                             memberRole={m.role}

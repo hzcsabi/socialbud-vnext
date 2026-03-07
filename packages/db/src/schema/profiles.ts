@@ -5,6 +5,8 @@ export interface ProfileRow {
   avatar_url: string | null;
   company_name: string | null;
   website: string | null;
+  /** When set and in the future, user is suspended (admin UI). Not in Auth. */
+  suspended_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -17,10 +19,16 @@ CREATE TABLE IF NOT EXISTS profiles (
   user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
   display_name TEXT,
   avatar_url TEXT,
+  suspended_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+`;
+
+/** Run after createProfilesTableSql on existing DBs to add suspended_at. */
+export const alterProfilesAddSuspendedAtSql = `
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS suspended_at TIMESTAMPTZ DEFAULT NULL;
 `;
 
 export const enableRlsProfilesSql =
