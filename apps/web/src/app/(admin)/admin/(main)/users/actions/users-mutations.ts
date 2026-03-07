@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getAdminUser } from "@/lib/admin";
 import { sendAccountDeletedEmail } from "@/lib/email";
 import { createServiceRoleClient } from "@/lib/supabase/server-admin";
+import { updateUserBannedUntil } from "@/lib/supabase-admin";
 
 /**
  * Suspend a user (admin only). Sets profiles.suspended_at so status shows as suspended in admin UI.
@@ -49,10 +50,7 @@ export async function unsuspendUserAsAdmin(userId: string): Promise<{ error?: st
     .eq("user_id", userId);
   if (profileError) return { error: profileError.message };
 
-  // Supabase API supports banned_until; AdminUserAttributes type is not yet updated in @supabase/supabase-js
-  await supabase.auth.admin.updateUserById(userId, {
-    banned_until: null,
-  } as Parameters<typeof supabase.auth.admin.updateUserById>[1]);
+  await updateUserBannedUntil(supabase, userId, null);
   revalidatePath("/admin/users");
   return {};
 }
@@ -139,10 +137,7 @@ export async function deleteUserAsAdmin(
       }
     }
 
-    // Supabase API supports banned_until; AdminUserAttributes type is not yet updated in @supabase/supabase-js
-    await supabase.auth.admin.updateUserById(userId, {
-      banned_until: bannedUntil.toISOString(),
-    } as Parameters<typeof supabase.auth.admin.updateUserById>[1]);
+    await updateUserBannedUntil(supabase, userId, bannedUntil.toISOString());
     revalidatePath("/admin/users");
     return { warning };
   } catch (err) {
