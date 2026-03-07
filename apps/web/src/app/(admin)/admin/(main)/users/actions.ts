@@ -817,9 +817,10 @@ export async function deleteUserAsAdmin(
       }
     }
 
+    // Supabase API supports banned_until; AdminUserAttributes type is not yet updated in @supabase/supabase-js
     await supabase.auth.admin.updateUserById(userId, {
       banned_until: bannedUntil.toISOString(),
-    });
+    } as Parameters<typeof supabase.auth.admin.updateUserById>[1]);
     revalidatePath("/admin/users");
     return { warning };
   } catch (err) {

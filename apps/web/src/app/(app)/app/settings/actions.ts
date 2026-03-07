@@ -33,9 +33,10 @@ export async function deleteAccount(): Promise<{ error?: string }> {
       if (insertError) return { error: insertError.message };
     }
 
+    // Supabase API supports banned_until; AdminUserAttributes type is not yet updated in @supabase/supabase-js
     await adminSupabase.auth.admin.updateUserById(user.id, {
       banned_until: bannedUntil.toISOString(),
-    });
+    } as Parameters<typeof adminSupabase.auth.admin.updateUserById>[1]);
     return {};
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed to delete account";

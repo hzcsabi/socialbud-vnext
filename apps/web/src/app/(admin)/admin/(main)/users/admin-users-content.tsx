@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   Card,
@@ -161,24 +161,27 @@ export function AdminUsersContent({
     [accounts]
   );
 
-  const filterAccounts = (list: AccountListEntry[]) => {
-    const q = search.trim().toLowerCase();
-    if (!q) return list;
-    return list.filter(
-      (a) =>
-        matchesSearch(a.name, q) ||
-        matchesSearch(a.parentAccountName, q) ||
-        a.memberEmails.some((e) => matchesSearch(e, q))
-    );
-  };
+  const filterAccounts = useCallback(
+    (list: AccountListEntry[]) => {
+      const q = search.trim().toLowerCase();
+      if (!q) return list;
+      return list.filter(
+        (a) =>
+          matchesSearch(a.name, q) ||
+          matchesSearch(a.parentAccountName, q) ||
+          a.memberEmails.some((e) => matchesSearch(e, q))
+      );
+    },
+    [search]
+  );
 
   const filteredIndividualAccounts = useMemo(
     () => filterAccounts(individualAccounts),
-    [individualAccounts, search]
+    [individualAccounts, filterAccounts]
   );
   const filteredParentAccounts = useMemo(
     () => filterAccounts(parentAccounts),
-    [parentAccounts, search]
+    [parentAccounts, filterAccounts]
   );
 
   const subaccountsByParentId = useMemo(() => {
