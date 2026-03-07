@@ -302,8 +302,8 @@ export function AdminUsersContent({
                                   >
                                     {account.accountName}
                                   </button>
-                                  <span className={cn("ml-1 rounded px-1.5 py-0.5 capitalize", roleClass(account.role))}>
-                                    {roleLabel(account.role)}
+                                  <span className={cn("ml-1 rounded px-1.5 py-0.5 capitalize", roleClass(account.role as MemberRole))}>
+                                    {roleLabel(account.role as MemberRole)}
                                   </span>
                                 </li>
                               ))}

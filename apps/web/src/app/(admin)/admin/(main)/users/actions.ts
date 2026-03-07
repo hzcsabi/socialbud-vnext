@@ -687,9 +687,10 @@ export async function suspendUserAsAdmin(userId: string): Promise<{ error?: stri
     );
   if (profileError) return { error: profileError.message };
 
+  // Supabase API supports banned_until; AdminUserAttributes type is not yet updated in @supabase/supabase-js
   await supabase.auth.admin.updateUserById(userId, {
     banned_until: iso,
-  });
+  } as Parameters<typeof supabase.auth.admin.updateUserById>[1]);
   revalidatePath("/admin/users");
   return {};
 }
@@ -711,9 +712,10 @@ export async function unsuspendUserAsAdmin(userId: string): Promise<{ error?: st
     .eq("user_id", userId);
   if (profileError) return { error: profileError.message };
 
+  // Supabase API supports banned_until; AdminUserAttributes type is not yet updated in @supabase/supabase-js
   await supabase.auth.admin.updateUserById(userId, {
     banned_until: null,
-  });
+  } as Parameters<typeof supabase.auth.admin.updateUserById>[1]);
   revalidatePath("/admin/users");
   return {};
 }

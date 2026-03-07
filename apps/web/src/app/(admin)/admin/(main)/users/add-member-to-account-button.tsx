@@ -69,7 +69,7 @@ export function AddMemberToAccountButton({
 
   useEffect(() => {
     if (open) {
-      setSelectedUserId(availableUsers.length > 0 ? availableUsers[0].id : "");
+      setSelectedUserId(availableUsers[0]?.id ?? "");
       setSelectedRole("member");
       setMessage(null);
     }
