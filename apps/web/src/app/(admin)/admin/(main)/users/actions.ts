@@ -134,7 +134,8 @@ export async function listUsersForAdmin(options?: { includeDeleted?: boolean }):
     const users: UserListEntry[] = authUsers
       .filter((u) => {
         const profile = profileByUserId.get(u.id);
-        if (profile?.deleted_at && !includeDeleted) return false;
+        if (includeDeleted) return Boolean(profile?.deleted_at);
+        if (profile?.deleted_at) return false;
         return true;
       })
       .map((u) => {

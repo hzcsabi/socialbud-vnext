@@ -267,16 +267,16 @@ export function AdminUsersContent({
       <Card className="mt-6">
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <CardTitle>All users</CardTitle>
+            <CardTitle>{showDeleted ? "Deleted users" : "All users"}</CardTitle>
             <label className="flex items-center gap-2 text-sm font-normal cursor-pointer text-muted-foreground hover:text-foreground">
               <input
                 type="checkbox"
                 checked={showDeleted}
                 onChange={(e) => setShowDeleted(e.target.checked)}
                 className="h-4 w-4 rounded border-border"
-                aria-label="Show deleted users"
+                aria-label="Show deleted users only"
               />
-              Show deleted users
+              Show deleted users only
             </label>
           </div>
           {error ? (
@@ -289,7 +289,11 @@ export function AdminUsersContent({
           <CardContent>
             {filteredUsers.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                {users.length === 0 ? "No users yet." : "No users match the search."}
+                {users.length === 0
+                  ? showDeleted
+                    ? "No deleted users."
+                    : "No users yet."
+                  : "No users match the search."}
               </p>
             ) : (
               <>
