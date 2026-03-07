@@ -10,7 +10,6 @@ export {
 } from "./schema/billing_accounts.js";
 export type {
   BillingAccountRow,
-  BillingAccountOwnerType,
   BillingModel,
 } from "./schema/billing_accounts.js";
 export {
@@ -27,7 +26,7 @@ export {
   enableRlsOrganizationsSql,
   ORGANIZATIONS_TABLE,
 } from "./schema/organizations.js";
-export type { OrganizationRow, OrganizationKind } from "./schema/organizations.js";
+export type { OrganizationRow } from "./schema/organizations.js";
 export {
   createOrganizationMembersTableSql,
   enableRlsOrganizationMembersSql,

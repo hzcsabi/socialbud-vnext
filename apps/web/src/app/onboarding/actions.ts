@@ -44,7 +44,7 @@ export async function submitOnboarding(formData: FormData) {
 
     const { data: org, error: orgError } = await adminSupabase
       .from("organizations")
-      .insert({ kind: "individual", name: orgName, slug: null })
+      .insert({ name: orgName, slug: null })
       .select("id")
       .single();
 

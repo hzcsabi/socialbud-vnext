@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "build": "pnpm -r run build",
-    "dev": "pnpm -r run dev --parallel",
+    "dev": "pnpm -r run dev",
     "dev:web": "pnpm --filter @socialbud/web run dev",
     "dev:brain": "pnpm --filter @socialbud/brain run dev",
     "db:migrate": "pnpm --filter @socialbud/brain run migrate",

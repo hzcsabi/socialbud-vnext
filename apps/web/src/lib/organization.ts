@@ -36,7 +36,7 @@ export async function ensureCurrentUserOrganization(): Promise<void> {
   const adminSupabase = createServiceRoleClient();
   const { data: org, error: orgError } = await adminSupabase
     .from("organizations")
-    .insert({ kind: "individual", name: orgName, slug: null })
+    .insert({ name: orgName, slug: null })
     .select("id")
     .single();
   if (orgError || !org) throw new Error(orgError?.message ?? "Failed to create organization");
@@ -91,7 +91,7 @@ export async function getCurrentUserOrganization(): Promise<{
         const adminSupabase = createServiceRoleClient();
         const { data: org, error: orgError } = await adminSupabase
           .from("organizations")
-          .insert({ kind: "individual", name: orgName, slug: null })
+          .insert({ name: orgName, slug: null })
           .select("id, name")
           .single();
         if (orgError || !org) return null;
