@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.2",
+    "@socialbud/services": "workspace:*",
     "@radix-ui/react-slot": "^1.1.0",
     "@socialbud/shared": "workspace:*",
     "@supabase/ssr": "^0.5.2",

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/server-admin";
+import { ensureUserAccount } from "@socialbud/services";
 
 export async function submitOnboarding(formData: FormData) {
   const supabase = await createClient();
@@ -30,39 +31,12 @@ export async function submitOnboarding(formData: FormData) {
     return { error: error.message };
   }
 
-  const { data: existingMember } = await supabase
-    .from("account_members")
-    .select("id")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
-
-  if (!existingMember) {
+  try {
     const adminSupabase = createServiceRoleClient();
-    const accountName =
-      displayName || companyName || "My workspace";
-
-    const { data: account, error: accountError } = await adminSupabase
-      .from("accounts")
-      .insert({ name: accountName, slug: null })
-      .select("id")
-      .single();
-
-    if (accountError) {
-      return { error: accountError.message };
-    }
-
-    const { error: memberError } = await adminSupabase
-      .from("account_members")
-      .insert({
-        account_id: account.id,
-        user_id: user.id,
-        role: "owner",
-      });
-
-    if (memberError) {
-      return { error: memberError.message };
-    }
+    await ensureUserAccount(adminSupabase, user.id);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed to ensure account";
+    return { error: msg };
   }
 
   redirect("/app");
