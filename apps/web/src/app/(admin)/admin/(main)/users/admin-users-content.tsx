@@ -12,6 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DeleteUserButton } from "./delete-user-button";
+import { DeleteAccountButton } from "./delete-account-button";
+import { SetAccountParentButton } from "./set-account-parent-button";
+import { MoveMemberButton } from "./move-member-button";
 import type { UserListEntry, AccountListEntry } from "./actions";
 
 const PAGE_SIZE = 50;
@@ -291,6 +294,15 @@ export function AdminUsersContent({
                                       ↓ sub-accounts
                                     </span>
                                   ) : null}
+                                  <span className="ml-1 inline-block">
+                                    <MoveMemberButton
+                                      userId={u.id}
+                                      email={u.email ?? ""}
+                                      fromAccountId={account.accountId}
+                                      fromAccountName={account.accountName}
+                                      accounts={accounts}
+                                    />
+                                  </span>
                                 </li>
                               ))}
                             </ul>
@@ -419,6 +431,7 @@ export function AdminUsersContent({
                       <th className="px-4 py-3 text-left font-medium">Members</th>
                       <th className="px-4 py-3 text-left font-medium">Has sub-accounts</th>
                       <th className="px-4 py-3 text-left font-medium">Member emails</th>
+                      <th className="px-4 py-3 text-right font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -476,18 +489,38 @@ export function AdminUsersContent({
                                 ? "—"
                                 : a.memberEmails.join(", ")}
                             </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <SetAccountParentButton
+                                  accountId={a.id}
+                                  accountName={a.name}
+                                  currentParentId={a.parent_account_id}
+                                  accounts={accounts}
+                                />
+                                <DeleteAccountButton accountId={a.id} accountName={a.name} />
+                              </div>
+                            </td>
                           </tr>
                           {accountTab === "individual" && membersExpanded && (
                             <tr className="border-b border-border bg-muted/30 last:border-0">
                               <td className="w-8 px-2 py-3" />
-                              <td colSpan={5} className="px-4 py-3 pl-10 text-muted-foreground">
+                              <td colSpan={6} className="px-4 py-3 pl-10 text-muted-foreground">
                                 <span className="text-xs font-medium">Members: </span>
-                                {a.memberEmails.length === 0 ? (
+                                {a.members.length === 0 ? (
                                   <span className="text-xs">No members</span>
                                 ) : (
-                                  <ul className="mt-1 list-inside list-disc text-xs">
-                                    {a.memberEmails.map((email) => (
-                                      <li key={email}>{email}</li>
+                                  <ul className="mt-1 space-y-1 text-xs">
+                                    {a.members.map((m) => (
+                                      <li key={m.userId} className="flex items-center gap-2">
+                                        <span>{m.email || m.userId}</span>
+                                        <MoveMemberButton
+                                          userId={m.userId}
+                                          email={m.email || m.userId}
+                                          fromAccountId={a.id}
+                                          fromAccountName={a.name}
+                                          accounts={accounts}
+                                        />
+                                      </li>
                                     ))}
                                   </ul>
                                 )}
@@ -512,6 +545,17 @@ export function AdminUsersContent({
                                 {sub.memberEmails.length === 0
                                   ? "—"
                                   : sub.memberEmails.join(", ")}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <SetAccountParentButton
+                                    accountId={sub.id}
+                                    accountName={sub.name}
+                                    currentParentId={sub.parent_account_id}
+                                    accounts={accounts}
+                                  />
+                                  <DeleteAccountButton accountId={sub.id} accountName={sub.name} />
+                                </div>
                               </td>
                             </tr>
                           ))}

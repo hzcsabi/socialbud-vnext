@@ -23,6 +23,8 @@ export type UserListEntry = {
   accounts: UserAccountEntry[];
 };
 
+export type AccountMemberEntry = { userId: string; email: string };
+
 export type AccountListEntry = {
   id: string;
   name: string;
@@ -31,6 +33,7 @@ export type AccountListEntry = {
   memberCount: number;
   hasSubaccounts: boolean;
   memberEmails: string[];
+  members: AccountMemberEntry[];
 };
 
 export async function listUsersForAdmin(): Promise<{
@@ -213,6 +216,10 @@ export async function listAccountsForAdmin(): Promise<{
       const memberEmails = memberIds
         .map((id) => emailByUserId.get(id))
         .filter((e): e is string => Boolean(e));
+      const members: AccountMemberEntry[] = memberIds.map((userId) => ({
+        userId,
+        email: emailByUserId.get(userId) ?? "",
+      }));
       return {
         id: a.id,
         name: a.name ?? "",
@@ -221,6 +228,7 @@ export async function listAccountsForAdmin(): Promise<{
         memberCount: memberCountByAccountId.get(a.id) ?? 0,
         hasSubaccounts: hasSubaccountsByAccountId.get(a.id) ?? false,
         memberEmails,
+        members,
       };
     });
 
@@ -232,6 +240,126 @@ export async function listAccountsForAdmin(): Promise<{
       err instanceof Error ? err.message : "Failed to list accounts";
     return { accounts: [], error: msg };
   }
+}
+
+/**
+ * Delete an account (admin only). Cascades to account_members, account_invitations,
+ * account_billing; children become top-level (parent_account_id set to NULL).
+ * Blocks if the current admin is a member of the account to avoid lockout.
+ */
+export async function deleteAccountAsAdmin(
+  accountId: string,
+  accountName: string | null
+): Promise<{ error?: string }> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: "Unauthorized" };
+
+  const supabase = createServiceRoleClient();
+
+  const { data: membership } = await supabase
+    .from("account_members")
+    .select("id")
+    .eq("account_id", accountId)
+    .eq("user_id", admin.user.id)
+    .maybeSingle();
+  if (membership) return { error: "You cannot delete an account you are a member of" };
+
+  const { error } = await supabase.from("accounts").delete().eq("id", accountId);
+  if (error) return { error: error.message };
+  return {};
+}
+
+/**
+ * Set an account's parent (admin only). Pass null to make top-level.
+ * Rejects if new parent would create a cycle (self or descendant).
+ */
+export async function setAccountParentAsAdmin(
+  accountId: string,
+  newParentAccountId: string | null
+): Promise<{ error?: string }> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: "Unauthorized" };
+
+  if (newParentAccountId === accountId) return { error: "Account cannot be its own parent" };
+
+  const supabase = createServiceRoleClient();
+
+  if (newParentAccountId !== null) {
+    const { data: target } = await supabase
+      .from("accounts")
+      .select("id")
+      .eq("id", newParentAccountId)
+      .maybeSingle();
+    if (!target) return { error: "Parent account not found" };
+
+    const descendantIds = new Set<string>();
+    let current = [accountId];
+    while (current.length > 0) {
+      const { data: children } = await supabase
+        .from("accounts")
+        .select("id")
+        .in("parent_account_id", current);
+      current = (children ?? []).map((c) => c.id).filter((id) => !descendantIds.has(id));
+      current.forEach((id) => descendantIds.add(id));
+    }
+    if (descendantIds.has(newParentAccountId)) return { error: "Cannot set parent to a descendant (would create a cycle)" };
+  }
+
+  const { error } = await supabase
+    .from("accounts")
+    .update({ parent_account_id: newParentAccountId, updated_at: new Date().toISOString() })
+    .eq("id", accountId);
+  if (error) return { error: error.message };
+  return {};
+}
+
+/**
+ * Move a member from one account to another (admin only). Preserves role.
+ * Fails if user is not in source account or already in target account.
+ */
+export async function moveMemberAsAdmin(
+  userId: string,
+  fromAccountId: string,
+  toAccountId: string
+): Promise<{ error?: string }> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: "Unauthorized" };
+
+  if (fromAccountId === toAccountId) return { error: "Source and target account are the same" };
+
+  const supabase = createServiceRoleClient();
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("account_members")
+    .select("id, role")
+    .eq("account_id", fromAccountId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (fetchError) return { error: fetchError.message };
+  if (!existing) return { error: "User is not a member of the source account" };
+
+  const { data: alreadyInTarget } = await supabase
+    .from("account_members")
+    .select("id")
+    .eq("account_id", toAccountId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (alreadyInTarget) return { error: "User is already a member of the target account" };
+
+  const { error: delError } = await supabase
+    .from("account_members")
+    .delete()
+    .eq("account_id", fromAccountId)
+    .eq("user_id", userId);
+  if (delError) return { error: delError.message };
+
+  const { error: insertError } = await supabase.from("account_members").insert({
+    account_id: toAccountId,
+    user_id: userId,
+    role: existing.role,
+  });
+  if (insertError) return { error: insertError.message };
+  return {};
 }
 
 /**
