@@ -27,9 +27,12 @@ export default async function AppLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name, company_name, website")
+    .select("display_name, company_name, website, deleted_at")
     .eq("user_id", user.id)
     .maybeSingle();
+  if (profile?.deleted_at) {
+    redirect("/api/auth/signout-deleted?redirect=%2Flogin");
+  }
   const incomplete = !profile || !profile.display_name?.trim();
   if (incomplete) redirect("/onboarding");
 

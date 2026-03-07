@@ -3,6 +3,8 @@ export interface AccountRow {
   name: string;
   slug: string | null;
   parent_account_id: string | null;
+  /** When set, account is soft-deleted (hidden from admin UI). Kept for analytics. */
+  deleted_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -15,12 +17,18 @@ CREATE TABLE IF NOT EXISTS accounts (
   name TEXT NOT NULL,
   slug TEXT UNIQUE,
   parent_account_id UUID REFERENCES accounts(id) ON DELETE SET NULL,
+  deleted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_slug_not_null ON accounts (slug) WHERE slug IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_accounts_parent_account_id ON accounts (parent_account_id);
+`;
+
+/** Run on existing DBs to add deleted_at for soft deletion. */
+export const alterAccountsAddDeletedAtSql = `
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL;
 `;
 
 export const enableRlsAccountsSql = `

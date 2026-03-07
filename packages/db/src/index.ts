@@ -23,6 +23,7 @@ export type {
 } from "./schema/account_billing.js";
 export {
   createAccountsTableSql,
+  alterAccountsAddDeletedAtSql,
   enableRlsAccountsSql,
   ACCOUNTS_TABLE,
 } from "./schema/accounts.js";
@@ -39,6 +40,7 @@ export type {
 export {
   createProfilesTableSql,
   alterProfilesAddSuspendedAtSql,
+  alterProfilesAddDeletedAtSql,
   enableRlsProfilesSql,
   PROFILES_TABLE,
 } from "./schema/profiles.js";

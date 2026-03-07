@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -27,6 +28,8 @@ function statusLabel(status: UserStatus) {
       return "Suspended";
     case "banned":
       return "Banned";
+    case "deleted":
+      return "Deleted";
     default:
       return status;
   }
@@ -41,6 +44,8 @@ function statusClass(status: UserStatus) {
     case "suspended":
     case "banned":
       return "bg-destructive/15 text-destructive";
+    case "deleted":
+      return "bg-muted text-muted-foreground";
     default:
       return "";
   }
@@ -84,6 +89,8 @@ type Props = {
   users: UserListEntry[];
   accounts: AccountListEntry[];
   currentUserId: string | null;
+  /** When true, deleted users are included in the list (from ?showDeleted=1). */
+  showDeleted?: boolean;
   error?: string;
   accountsError?: string;
 };
@@ -92,9 +99,12 @@ export function AdminUsersContent({
   users,
   accounts,
   currentUserId,
+  showDeleted = false,
   error,
   accountsError,
 }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [search, setSearch] = useState("");
   const [mainTab, setMainTab] = useState<MainTab>("accounts");
   const [accountTab, setAccountTab] = useState<AccountTab>("individual");
@@ -102,6 +112,11 @@ export function AdminUsersContent({
   const [accountPage, setAccountPage] = useState(1);
   const [expandedParentIds, setExpandedParentIds] = useState<Set<string>>(new Set());
   const [expandedMemberIds, setExpandedMemberIds] = useState<Set<string>>(new Set());
+
+  function setShowDeleted(checked: boolean) {
+    const url = checked ? `${pathname}?showDeleted=1` : pathname;
+    router.push(url);
+  }
 
   useEffect(() => {
     setAccountPage(1);
@@ -251,9 +266,21 @@ export function AdminUsersContent({
       {mainTab === "users" && (
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>All users</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <CardTitle>All users</CardTitle>
+            <label className="flex items-center gap-2 text-sm font-normal cursor-pointer text-muted-foreground hover:text-foreground">
+              <input
+                type="checkbox"
+                checked={showDeleted}
+                onChange={(e) => setShowDeleted(e.target.checked)}
+                className="h-4 w-4 rounded border-border"
+                aria-label="Show deleted users"
+              />
+              Show deleted users
+            </label>
+          </div>
           {error ? (
-            <p className="text-sm text-destructive">
+            <p className="text-sm text-destructive mt-2">
               {error}. Ensure SUPABASE_SERVICE_ROLE_KEY is set in your env.
             </p>
           ) : null}
@@ -323,7 +350,7 @@ export function AdminUsersContent({
                             userId={u.id}
                             email={u.email}
                             status={u.status}
-                            disabled={u.id === currentUserId}
+                            disabled={u.id === currentUserId || u.status === "deleted"}
                             accounts={accounts}
                             currentAccountIds={u.accounts.map((a) => a.accountId)}
                           />

@@ -24,7 +24,7 @@ export type UserListEntry = {
   accounts: UserAccountEntry[];
 };
 
-export type UserStatus = "active" | "pending" | "banned" | "suspended";
+export type UserStatus = "active" | "pending" | "banned" | "suspended" | "deleted";
 
 export type MemberRole = "owner" | "admin" | "member";
 
@@ -55,10 +55,11 @@ export type AccountListEntry = {
   billingResponsible: string | null;
 };
 
-export async function listUsersForAdmin(): Promise<{
+export async function listUsersForAdmin(options?: { includeDeleted?: boolean }): Promise<{
   users: UserListEntry[];
   error?: string;
 }> {
+  const includeDeleted = options?.includeDeleted === true;
   const admin = await getAdminUser();
   if (!admin) return { users: [], error: "Unauthorized" };
   try {
@@ -73,7 +74,7 @@ export async function listUsersForAdmin(): Promise<{
     const userIds = authUsers.map((u) => u.id);
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("user_id, display_name, website, suspended_at")
+      .select("user_id, display_name, website, suspended_at, deleted_at")
       .in("user_id", userIds);
 
     const profileByUserId = new Map(
@@ -82,7 +83,8 @@ export async function listUsersForAdmin(): Promise<{
 
     const { data: allAccounts } = await supabase
       .from("accounts")
-      .select("id, name, parent_account_id");
+      .select("id, name, parent_account_id")
+      .is("deleted_at", null);
 
     const accountById = new Map(
       (allAccounts ?? []).map((a) => [
@@ -129,37 +131,46 @@ export async function listUsersForAdmin(): Promise<{
     }
 
     const now = new Date();
-    const users: UserListEntry[] = authUsers.map((u) => {
-      const profile = profileByUserId.get(u.id);
-      let status: UserListEntry["status"] = "active";
-      const profileSuspended = profile?.suspended_at && new Date(profile.suspended_at) > now;
-      const authSuspended = u.banned_until && new Date(u.banned_until) > now;
-      if (profileSuspended || authSuspended) status = "suspended";
-      else if (!u.email_confirmed_at) status = "pending";
+    const users: UserListEntry[] = authUsers
+      .filter((u) => {
+        const profile = profileByUserId.get(u.id);
+        if (profile?.deleted_at && !includeDeleted) return false;
+        return true;
+      })
+      .map((u) => {
+        const profile = profileByUserId.get(u.id);
+        const isDeleted = Boolean(profile?.deleted_at);
+        let status: UserListEntry["status"] = isDeleted ? "deleted" : "active";
+        if (!isDeleted) {
+          const profileSuspended = profile?.suspended_at && new Date(profile.suspended_at) > now;
+          const authSuspended = u.banned_until && new Date(u.banned_until) > now;
+          if (profileSuspended || authSuspended) status = "suspended";
+          else if (!u.email_confirmed_at) status = "pending";
+        }
 
-      const memberships = membersByUserId.get(u.id) ?? [];
-      const accounts: UserAccountEntry[] = memberships.map((m) => {
-        const account = accountById.get(m.account_id);
+        const memberships = membersByUserId.get(u.id) ?? [];
+        const accounts: UserAccountEntry[] = memberships.map((m) => {
+          const account = accountById.get(m.account_id);
+          return {
+            accountId: m.account_id,
+            accountName: account?.name ?? "",
+            role: m.role,
+            memberCount: memberCountByAccountId.get(m.account_id) ?? 0,
+            parentAccountName: parentAccountNameByAccountId.get(m.account_id) ?? null,
+            hasSubaccounts: hasSubaccountsByAccountId.get(m.account_id) ?? false,
+          };
+        });
+
         return {
-          accountId: m.account_id,
-          accountName: account?.name ?? "",
-          role: m.role,
-          memberCount: memberCountByAccountId.get(m.account_id) ?? 0,
-          parentAccountName: parentAccountNameByAccountId.get(m.account_id) ?? null,
-          hasSubaccounts: hasSubaccountsByAccountId.get(m.account_id) ?? false,
+          id: u.id,
+          email: u.email ?? null,
+          name: profile?.display_name ?? null,
+          website: profile?.website ?? null,
+          status,
+          createdAt: u.created_at,
+          accounts,
         };
       });
-
-      return {
-        id: u.id,
-        email: u.email ?? null,
-        name: profile?.display_name ?? null,
-        website: profile?.website ?? null,
-        status,
-        createdAt: u.created_at,
-        accounts,
-      };
-    });
 
     return { users };
   } catch (err) {
@@ -179,6 +190,7 @@ export async function listAccountsForAdmin(): Promise<{
     const { data: allAccounts } = await supabase
       .from("accounts")
       .select("id, name, parent_account_id")
+      .is("deleted_at", null)
       .order("name");
 
     if (!allAccounts?.length) return { accounts: [] };
@@ -217,15 +229,17 @@ export async function listAccountsForAdmin(): Promise<{
     const emailByUserId = new Map<string, string>();
     const nameByUserId = new Map<string, string | null>();
     const statusByUserId = new Map<string, UserStatus>();
+    const deletedUserIds = new Set<string>();
     if (allUserIds.length > 0) {
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("user_id, display_name, suspended_at")
+        .select("user_id, display_name, suspended_at, deleted_at")
         .in("user_id", allUserIds);
       const suspendedAtByUserId = new Map<string, string>();
       for (const p of profiles ?? []) {
         nameByUserId.set(p.user_id, p.display_name ?? null);
         if (p.suspended_at) suspendedAtByUserId.set(p.user_id, p.suspended_at);
+        if (p.deleted_at) deletedUserIds.add(p.user_id);
       }
       const {
         data: { users: authUsers },
@@ -292,7 +306,8 @@ export async function listAccountsForAdmin(): Promise<{
     }
 
     const accounts: AccountListEntry[] = allAccounts.map((a) => {
-      const memberIds = userIdsByAccountId.get(a.id) ?? [];
+      const allMemberIds = userIdsByAccountId.get(a.id) ?? [];
+      const memberIds = allMemberIds.filter((id) => !deletedUserIds.has(id));
       const memberEmails = memberIds
         .map((id) => emailByUserId.get(id))
         .filter((e): e is string => Boolean(e));
@@ -324,7 +339,7 @@ export async function listAccountsForAdmin(): Promise<{
         name: a.name ?? "",
         parent_account_id: a.parent_account_id ?? null,
         parentAccountName: parentAccountNameByAccountId.get(a.id) ?? null,
-        memberCount: memberCountByAccountId.get(a.id) ?? 0,
+        memberCount: memberIds.length,
         hasSubaccounts: hasSubaccountsByAccountId.get(a.id) ?? false,
         subaccountCount: subaccountCountByAccountId.get(a.id) ?? 0,
         memberEmails,
@@ -367,8 +382,18 @@ export async function deleteAccountAsAdmin(
     .maybeSingle();
   if (membership) return { error: "You cannot delete an account you are a member of" };
 
-  const { error } = await supabase.from("accounts").delete().eq("id", accountId);
-  if (error) return { error: error.message };
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("accounts")
+    .update({ deleted_at: now, updated_at: now })
+    .eq("id", accountId);
+  if (error) {
+    const msg = error.message;
+    if (msg?.includes("deleted_at") || msg?.includes("column"))
+      return { error: `${msg} Run the migration to add deleted_at (e.g. ALTER TABLE accounts ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL).` };
+    return { error: msg };
+  }
+  revalidatePath("/admin/users");
   return {};
 }
 
@@ -721,8 +746,8 @@ export async function unsuspendUserAsAdmin(userId: string): Promise<{ error?: st
 }
 
 /**
- * Delete a user (admin only). Tries to send a notification email; if that fails (e.g. RESEND_API_KEY not set),
- * still deletes the user and returns a warning. Related data (profiles, etc.) is removed by DB cascade.
+ * Soft-delete a user (admin only). Sets profiles.deleted_at and auth banned_until so they disappear from
+ * the admin UI and cannot sign in. Data is preserved for analytics. Optionally sends a notification email.
  */
 export async function deleteUserAsAdmin(
   userId: string,
@@ -737,13 +762,45 @@ export async function deleteUserAsAdmin(
     if (email?.trim()) {
       const { sent, error: emailError } = await sendAccountDeletedEmail(email.trim());
       if (!sent && emailError) {
-        warning = `User deleted. Notification email was not sent: ${emailError}`;
+        warning = `User deactivated. Notification email was not sent: ${emailError}`;
       }
     }
 
     const supabase = createServiceRoleClient();
-    const { error } = await supabase.auth.admin.deleteUser(userId);
-    if (error) return { error: error.message };
+    const now = new Date().toISOString();
+    const bannedUntil = new Date();
+    bannedUntil.setFullYear(bannedUntil.getFullYear() + 10);
+
+    const { data: updated, error: updateError } = await supabase
+      .from("profiles")
+      .update({ deleted_at: now, updated_at: now })
+      .eq("user_id", userId)
+      .select("user_id");
+    if (updateError) {
+      const msg = updateError.message;
+      if (msg?.includes("deleted_at") || msg?.includes("column"))
+        return { error: `${msg} Run the migration to add deleted_at (e.g. pnpm db:migrate or ALTER TABLE profiles ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL).` };
+      return { error: msg };
+    }
+    if (!updated?.length) {
+      const { error: insertError } = await supabase
+        .from("profiles")
+        .upsert(
+          { user_id: userId, deleted_at: now, updated_at: now },
+          { onConflict: "user_id" }
+        );
+      if (insertError) {
+        const msg = insertError.message;
+        if (msg?.includes("deleted_at") || msg?.includes("column"))
+          return { error: `${msg} Run the migration to add deleted_at.` };
+        return { error: msg };
+      }
+    }
+
+    await supabase.auth.admin.updateUserById(userId, {
+      banned_until: bannedUntil.toISOString(),
+    });
+    revalidatePath("/admin/users");
     return { warning };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed to delete user";

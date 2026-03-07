@@ -24,6 +24,14 @@ export default async function AdminMainLayout({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/admin/login");
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("deleted_at")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (profile?.deleted_at) {
+    redirect("/api/auth/signout-deleted?redirect=%2Fadmin%2Flogin");
+  }
   const { data: adminRow } = await supabase
     .from("admins")
     .select("user_id")

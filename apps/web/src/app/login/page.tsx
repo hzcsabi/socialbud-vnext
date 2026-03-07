@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { ConfigError } from "../(app)/config-error";
 import {
@@ -8,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LoginForm } from "./login-form";
+import { ClearLoginErrorCookie } from "./clear-login-error";
 
 function isAllowedRedirect(path: string): boolean {
   return /^\/[^:]*$/.test(path ?? "");
@@ -43,12 +45,21 @@ export default async function LoginPage({
 
   const params = await searchParams;
   const nextUrl = params.next?.trim() && isAllowedRedirect(params.next!.trim()) ? params.next!.trim() : undefined;
+  const cookieStore = await cookies();
+  const loginError = cookieStore.get("login_error")?.value;
+  const showNoUserError = loginError === "no_user_found";
 
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
+      <ClearLoginErrorCookie show={showNoUserError} />
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle>Sign in</CardTitle>
+          {showNoUserError && (
+            <p className="text-sm text-destructive" role="alert">
+              No user found.
+            </p>
+          )}
           {params.error && (
             <p className="text-sm text-destructive" role="alert">
               {decodeURIComponent(params.error)}

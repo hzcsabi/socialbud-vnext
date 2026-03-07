@@ -7,6 +7,8 @@ export interface ProfileRow {
   website: string | null;
   /** When set and in the future, user is suspended (admin UI). Not in Auth. */
   suspended_at: Date | null;
+  /** When set, user is soft-deleted (hidden from admin UI, cannot sign in). Kept for analytics. */
+  deleted_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -20,6 +22,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   display_name TEXT,
   avatar_url TEXT,
   suspended_at TIMESTAMPTZ,
+  deleted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -29,6 +32,11 @@ CREATE TABLE IF NOT EXISTS profiles (
 /** Run after createProfilesTableSql on existing DBs to add suspended_at. */
 export const alterProfilesAddSuspendedAtSql = `
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS suspended_at TIMESTAMPTZ DEFAULT NULL;
+`;
+
+/** Run on existing DBs to add deleted_at for soft deletion. */
+export const alterProfilesAddDeletedAtSql = `
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL;
 `;
 
 export const enableRlsProfilesSql =
