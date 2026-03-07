@@ -25,11 +25,14 @@ export type UserListEntry = {
 
 export type UserStatus = "active" | "pending" | "banned" | "suspended";
 
+export type MemberRole = "owner" | "admin" | "member";
+
 export type AccountMemberEntry = {
   userId: string;
   email: string;
   name: string | null;
   status: UserStatus;
+  role: MemberRole;
 };
 
 export type AccountListEntry = {
@@ -190,10 +193,11 @@ export async function listAccountsForAdmin(): Promise<{
 
     const { data: allMembers } = await supabase
       .from("account_members")
-      .select("account_id, user_id");
+      .select("account_id, user_id, role");
 
     const memberCountByAccountId = new Map<string, number>();
     const userIdsByAccountId = new Map<string, string[]>();
+    const roleByAccountAndUser = new Map<string, MemberRole>();
     for (const m of allMembers ?? []) {
       memberCountByAccountId.set(
         m.account_id,
@@ -202,6 +206,8 @@ export async function listAccountsForAdmin(): Promise<{
       const list = userIdsByAccountId.get(m.account_id) ?? [];
       list.push(m.user_id);
       userIdsByAccountId.set(m.account_id, list);
+      const role = m.role === "owner" || m.role === "admin" || m.role === "member" ? m.role : "member";
+      roleByAccountAndUser.set(`${m.account_id}:${m.user_id}`, role);
     }
 
     const allUserIds = [...new Set((allMembers ?? []).map((m) => m.user_id))];
@@ -288,6 +294,7 @@ export async function listAccountsForAdmin(): Promise<{
         email: emailByUserId.get(userId) ?? "",
         name: nameByUserId.get(userId) ?? null,
         status: statusByUserId.get(userId) ?? "active",
+        role: roleByAccountAndUser.get(`${a.id}:${userId}`) ?? "member",
       }));
       const billingAccountId = billingAccountIdByAccountId.get(a.id);
       let subscriptionStatus: string | null = null;
@@ -470,6 +477,79 @@ export async function moveMemberAsAdmin(
     role: existing.role,
   });
   if (insertError) return { error: insertError.message };
+  return {};
+}
+
+/**
+ * Set a member's role in an account (admin only). Role must be owner, admin, or member.
+ * Ensures the account always has exactly one owner: demoting the only owner is rejected;
+ * promoting someone to owner demotes any existing owner(s) to admin.
+ */
+export async function setAccountMemberRoleAsAdmin(
+  accountId: string,
+  userId: string,
+  newRole: MemberRole
+): Promise<{ error?: string }> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: "Unauthorized" };
+
+  const supabase = createServiceRoleClient();
+
+  const { data: currentMember, error: fetchMemberError } = await supabase
+    .from("account_members")
+    .select("role")
+    .eq("account_id", accountId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (fetchMemberError) return { error: fetchMemberError.message };
+  if (!currentMember) return { error: "User is not a member of this account" };
+
+  if (newRole === "owner") {
+    const { data: currentOwners, error: ownersError } = await supabase
+      .from("account_members")
+      .select("user_id")
+      .eq("account_id", accountId)
+      .eq("role", "owner");
+    if (ownersError) return { error: ownersError.message };
+    const ownerUserIds = (currentOwners ?? []).map((r) => r.user_id).filter((id) => id !== userId);
+    for (const ownerId of ownerUserIds) {
+      const { error: demoteError } = await supabase
+        .from("account_members")
+        .update({ role: "admin" })
+        .eq("account_id", accountId)
+        .eq("user_id", ownerId);
+      if (demoteError) return { error: demoteError.message };
+    }
+    const { error: promoteError } = await supabase
+      .from("account_members")
+      .update({ role: "owner" })
+      .eq("account_id", accountId)
+      .eq("user_id", userId);
+    if (promoteError) return { error: promoteError.message };
+    return {};
+  }
+
+  if (currentMember.role === "owner") {
+    const { data: owners, error: countError } = await supabase
+      .from("account_members")
+      .select("user_id")
+      .eq("account_id", accountId)
+      .eq("role", "owner");
+    if (countError) return { error: countError.message };
+    if ((owners ?? []).length <= 1) {
+      return {
+        error:
+          "Account must have an owner. Promote another member to owner first, then you can change this member's role.",
+      };
+    }
+  }
+
+  const { error } = await supabase
+    .from("account_members")
+    .update({ role: newRole })
+    .eq("account_id", accountId)
+    .eq("user_id", userId);
+  if (error) return { error: error.message };
   return {};
 }
 

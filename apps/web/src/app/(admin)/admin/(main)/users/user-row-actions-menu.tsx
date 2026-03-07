@@ -16,9 +16,24 @@ import {
 } from "@/components/ui/alert-dialog";
 import { MoveMemberButton } from "./move-member-button";
 import { DeleteUserButton } from "./delete-user-button";
-import { suspendUserAsAdmin } from "./actions";
-import type { AccountListEntry } from "./actions";
+import { suspendUserAsAdmin, setAccountMemberRoleAsAdmin } from "./actions";
+import type { AccountListEntry, MemberRole } from "./actions";
 import { cn } from "@/lib/utils";
+
+const ROLES: MemberRole[] = ["owner", "admin", "member"];
+
+function roleLabel(role: MemberRole) {
+  switch (role) {
+    case "owner":
+      return "Owner";
+    case "admin":
+      return "Admin";
+    case "member":
+      return "User";
+    default:
+      return role;
+  }
+}
 
 type Props = {
   userId: string;
@@ -26,6 +41,7 @@ type Props = {
   disabled?: boolean;
   fromAccountId?: string;
   fromAccountName?: string;
+  memberRole?: MemberRole;
   accounts?: AccountListEntry[];
 };
 
@@ -35,12 +51,17 @@ export function UserRowActionsMenu({
   disabled,
   fromAccountId,
   fromAccountName,
+  memberRole,
   accounts = [],
 }: Props) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
   const [moveOpen, setMoveOpen] = useState(false);
+  const [changeRoleOpen, setChangeRoleOpen] = useState(false);
+  const [changeRoleLoading, setChangeRoleLoading] = useState(false);
+  const [changeRoleError, setChangeRoleError] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<MemberRole>("member");
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [suspendLoading, setSuspendLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -78,7 +99,22 @@ export function UserRowActionsMenu({
     router.refresh();
   }
 
+  async function handleChangeRoleConfirm() {
+    if (!fromAccountId) return;
+    setChangeRoleLoading(true);
+    setChangeRoleError(null);
+    const result = await setAccountMemberRoleAsAdmin(fromAccountId, userId, selectedRole);
+    setChangeRoleLoading(false);
+    if (result.error) {
+      setChangeRoleError(result.error);
+      return;
+    }
+    setChangeRoleOpen(false);
+    router.refresh();
+  }
+
   const showMove = fromAccountId != null && fromAccountName != null && accounts.length > 0;
+  const showChangeRole = fromAccountId != null && memberRole != null;
 
   const DROPDOWN_ESTIMATED_HEIGHT = 200;
   const spaceBelow = dropdownRect ? window.innerHeight - dropdownRect.bottom - 4 : 0;
@@ -106,6 +142,22 @@ export function UserRowActionsMenu({
           onClick={() => closeAnd(() => setMoveOpen(true))}
         >
           Move
+        </button>
+      )}
+      {showChangeRole && (
+        <button
+          type="button"
+          role="menuitem"
+          className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
+          onClick={() => {
+            closeAnd(() => {
+              setSelectedRole(memberRole ?? "member");
+              setChangeRoleError(null);
+              setChangeRoleOpen(true);
+            });
+          }}
+        >
+          Change role
         </button>
       )}
       <button
@@ -145,7 +197,7 @@ export function UserRowActionsMenu({
       </Button>
       {typeof document !== "undefined" && dropdownContent && createPortal(dropdownContent, document.body)}
 
-      {showMove && (
+      {showMove && fromAccountId && fromAccountName && (
         <MoveMemberButton
           userId={userId}
           email={email ?? ""}
@@ -156,6 +208,49 @@ export function UserRowActionsMenu({
           onOpenChange={setMoveOpen}
         />
       )}
+      <AlertDialog open={changeRoleOpen} onOpenChange={(v) => setChangeRoleOpen(v === true)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change role</AlertDialogTitle>
+            <AlertDialogDescription>
+              Set the role for this member in {fromAccountName ?? "this account"}. Owner and Admin can manage members.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <label className="sr-only" htmlFor="change-role-select">
+              Role
+            </label>
+            <select
+              id="change-role-select"
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value as MemberRole)}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+            >
+              {ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {roleLabel(r)}
+                </option>
+              ))}
+            </select>
+          </div>
+          {changeRoleError && (
+            <p className="text-sm text-destructive">{changeRoleError}</p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={changeRoleLoading}>Cancel</AlertDialogCancel>
+            <Button
+              type="button"
+              disabled={changeRoleLoading}
+              onClick={(e) => {
+                e.preventDefault();
+                handleChangeRoleConfirm();
+              }}
+            >
+              {changeRoleLoading ? "Saving…" : "Save"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog open={suspendOpen} onOpenChange={(v) => setSuspendOpen(v === true)}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -4,7 +4,6 @@ import React, { useState, useMemo, useEffect } from "react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -14,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { DeleteUserButton } from "./delete-user-button";
 import { AccountRowActionsMenu } from "./account-row-actions-menu";
 import { UserRowActionsMenu } from "./user-row-actions-menu";
-import type { UserListEntry, AccountListEntry, UserStatus } from "./actions";
+import type { UserListEntry, AccountListEntry, UserStatus, MemberRole } from "./actions";
 
 const PAGE_SIZE = 50;
 
@@ -44,6 +43,19 @@ function statusClass(status: UserStatus) {
       return "bg-destructive/15 text-destructive";
     default:
       return "";
+  }
+}
+
+function roleLabel(role: MemberRole) {
+  switch (role) {
+    case "owner":
+      return "Owner";
+    case "admin":
+      return "Admin";
+    case "member":
+      return "User";
+    default:
+      return role;
   }
 }
 
@@ -227,9 +239,6 @@ export function AdminUsersContent({
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>All users</CardTitle>
-          <CardDescription>
-            Name, email, accounts (with role and member count), website, and status (Active = confirmed email; Pending = not yet confirmed; Banned = access revoked).
-          </CardDescription>
           {error ? (
             <p className="text-sm text-destructive">
               {error}. Ensure SUPABASE_SERVICE_ROLE_KEY is set in your env.
@@ -511,6 +520,9 @@ export function AdminUsersContent({
                                         <div className="flex min-w-0 flex-1 items-center gap-4">
                                           <span className="shrink-0">{m.name ?? "—"}</span>
                                           <span className="min-w-0 truncate">{m.email || m.userId}</span>
+                                          <span className="inline-flex shrink-0 rounded bg-muted px-2 py-0.5 text-xs font-medium capitalize text-muted-foreground">
+                                            {roleLabel(m.role)}
+                                          </span>
                                           <span
                                             className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusClass(m.status)}`}
                                           >
@@ -523,6 +535,7 @@ export function AdminUsersContent({
                                             email={m.email || m.userId}
                                             fromAccountId={a.id}
                                             fromAccountName={a.name}
+                                            memberRole={m.role}
                                             accounts={accounts}
                                             disabled={m.userId === currentUserId}
                                           />
