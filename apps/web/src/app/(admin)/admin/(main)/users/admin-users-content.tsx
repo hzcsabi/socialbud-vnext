@@ -12,19 +12,20 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DeleteUserButton } from "./delete-user-button";
-import { DeleteAccountButton } from "./delete-account-button";
-import { SetAccountParentButton } from "./set-account-parent-button";
-import { MoveMemberButton } from "./move-member-button";
-import type { UserListEntry, AccountListEntry } from "./actions";
+import { AccountRowActionsMenu } from "./account-row-actions-menu";
+import { UserRowActionsMenu } from "./user-row-actions-menu";
+import type { UserListEntry, AccountListEntry, UserStatus } from "./actions";
 
 const PAGE_SIZE = 50;
 
-function statusLabel(status: "active" | "pending" | "banned") {
+function statusLabel(status: UserStatus) {
   switch (status) {
     case "active":
       return "Active";
     case "pending":
       return "Pending";
+    case "suspended":
+      return "Suspended";
     case "banned":
       return "Banned";
     default:
@@ -32,12 +33,13 @@ function statusLabel(status: "active" | "pending" | "banned") {
   }
 }
 
-function statusClass(status: "active" | "pending" | "banned") {
+function statusClass(status: UserStatus) {
   switch (status) {
     case "active":
       return "bg-green-500/15 text-green-700 dark:text-green-400";
     case "pending":
       return "bg-amber-500/15 text-amber-700 dark:text-amber-400";
+    case "suspended":
     case "banned":
       return "bg-destructive/15 text-destructive";
     default:
@@ -294,15 +296,6 @@ export function AdminUsersContent({
                                       ↓ sub-accounts
                                     </span>
                                   ) : null}
-                                  <span className="ml-1 inline-block">
-                                    <MoveMemberButton
-                                      userId={u.id}
-                                      email={u.email ?? ""}
-                                      fromAccountId={account.accountId}
-                                      fromAccountName={account.accountName}
-                                      accounts={accounts}
-                                    />
-                                  </span>
                                 </li>
                               ))}
                             </ul>
@@ -317,7 +310,7 @@ export function AdminUsersContent({
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <DeleteUserButton
+                          <UserRowActionsMenu
                             userId={u.id}
                             email={u.email}
                             disabled={u.id === currentUserId}
@@ -364,9 +357,6 @@ export function AdminUsersContent({
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Accounts</CardTitle>
-          <CardDescription>
-            All accounts with parent, member count, sub-accounts, and member emails. Sorted by member count (desc). Useful for debugging and cleanup.
-          </CardDescription>
           {accountsError ? (
             <p className="text-sm text-destructive">{accountsError}</p>
           ) : null}
@@ -391,7 +381,7 @@ export function AdminUsersContent({
                     : "border-transparent bg-transparent text-muted-foreground hover:text-foreground"
                 )}
               >
-                Individual accounts ({filteredIndividualAccounts.length})
+                Accounts ({filteredIndividualAccounts.length})
               </button>
               <button
                 type="button"
@@ -429,8 +419,12 @@ export function AdminUsersContent({
                       <th className="px-4 py-3 text-left font-medium">Name</th>
                       <th className="px-4 py-3 text-left font-medium">Parent</th>
                       <th className="px-4 py-3 text-left font-medium">Members</th>
-                      <th className="px-4 py-3 text-left font-medium">Has sub-accounts</th>
-                      <th className="px-4 py-3 text-left font-medium">Member emails</th>
+                      <th className="px-4 py-3 text-left font-medium">Subscription</th>
+                      <th className="px-4 py-3 text-left font-medium">Plan</th>
+                      <th className="px-4 py-3 text-left font-medium">Billing</th>
+                      {accountTab === "parent" && (
+                        <th className="px-4 py-3 text-left font-medium">Subaccounts</th>
+                      )}
                       <th className="px-4 py-3 text-right font-medium">Actions</th>
                     </tr>
                   </thead>
@@ -478,48 +472,61 @@ export function AdminUsersContent({
                               {a.parentAccountName ?? "—"}
                             </td>
                             <td className="px-4 py-3">{a.memberCount}</td>
-                            <td className="px-4 py-3">
-                              {a.hasSubaccounts ? "Yes" : "—"}
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {a.subscriptionStatus ?? "—"}
                             </td>
-                            <td
-                              className="max-w-xs truncate px-4 py-3 text-muted-foreground"
-                              title={a.memberEmails.join(", ")}
-                            >
-                              {a.memberEmails.length === 0
-                                ? "—"
-                                : a.memberEmails.join(", ")}
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {a.plan ?? "—"}
                             </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {a.billingResponsible ?? "—"}
+                            </td>
+                            {accountTab === "parent" && (
+                              <td className="px-4 py-3">
+                                {a.subaccountCount > 0 ? a.subaccountCount : "—"}
+                              </td>
+                            )}
                             <td className="px-4 py-3 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <SetAccountParentButton
-                                  accountId={a.id}
-                                  accountName={a.name}
-                                  currentParentId={a.parent_account_id}
-                                  accounts={accounts}
-                                />
-                                <DeleteAccountButton accountId={a.id} accountName={a.name} />
-                              </div>
+                              <AccountRowActionsMenu
+                                accountId={a.id}
+                                accountName={a.name}
+                                currentParentId={a.parent_account_id}
+                                accounts={accounts}
+                              />
                             </td>
                           </tr>
                           {accountTab === "individual" && membersExpanded && (
                             <tr className="border-b border-border bg-muted/30 last:border-0">
                               <td className="w-8 px-2 py-3" />
-                              <td colSpan={6} className="px-4 py-3 pl-10 text-muted-foreground">
-                                <span className="text-xs font-medium">Members: </span>
+                              <td colSpan={8} className="px-4 py-3 pl-10">
                                 {a.members.length === 0 ? (
-                                  <span className="text-xs">No members</span>
+                                  <span className="text-sm text-muted-foreground">No members</span>
                                 ) : (
-                                  <ul className="mt-1 space-y-1 text-xs">
+                                  <ul className="mt-2 space-y-2.5">
                                     {a.members.map((m) => (
-                                      <li key={m.userId} className="flex items-center gap-2">
-                                        <span>{m.email || m.userId}</span>
-                                        <MoveMemberButton
-                                          userId={m.userId}
-                                          email={m.email || m.userId}
-                                          fromAccountId={a.id}
-                                          fromAccountName={a.name}
-                                          accounts={accounts}
-                                        />
+                                      <li
+                                        key={m.userId}
+                                        className="flex items-center justify-between gap-4 text-sm text-foreground"
+                                      >
+                                        <div className="flex min-w-0 flex-1 items-center gap-4">
+                                          <span className="shrink-0">{m.name ?? "—"}</span>
+                                          <span className="min-w-0 truncate">{m.email || m.userId}</span>
+                                          <span
+                                            className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusClass(m.status)}`}
+                                          >
+                                            {statusLabel(m.status)}
+                                          </span>
+                                        </div>
+                                        <div className="shrink-0">
+                                          <UserRowActionsMenu
+                                            userId={m.userId}
+                                            email={m.email || m.userId}
+                                            fromAccountId={a.id}
+                                            fromAccountName={a.name}
+                                            accounts={accounts}
+                                            disabled={m.userId === currentUserId}
+                                          />
+                                        </div>
                                       </li>
                                     ))}
                                   </ul>
@@ -537,25 +544,23 @@ export function AdminUsersContent({
                                 {sub.parentAccountName ?? "—"}
                               </td>
                               <td className="px-4 py-3">{sub.memberCount}</td>
-                              <td className="px-4 py-3">—</td>
-                              <td
-                                className="max-w-xs truncate px-4 py-3 text-muted-foreground"
-                                title={sub.memberEmails.join(", ")}
-                              >
-                                {sub.memberEmails.length === 0
-                                  ? "—"
-                                  : sub.memberEmails.join(", ")}
+                              <td className="px-4 py-3 text-muted-foreground">
+                                {sub.subscriptionStatus ?? "—"}
                               </td>
+                              <td className="px-4 py-3 text-muted-foreground">
+                                {sub.plan ?? "—"}
+                              </td>
+                              <td className="px-4 py-3 text-muted-foreground">
+                                {sub.billingResponsible ?? "—"}
+                              </td>
+                              <td className="px-4 py-3 text-muted-foreground">—</td>
                               <td className="px-4 py-3 text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  <SetAccountParentButton
-                                    accountId={sub.id}
-                                    accountName={sub.name}
-                                    currentParentId={sub.parent_account_id}
-                                    accounts={accounts}
-                                  />
-                                  <DeleteAccountButton accountId={sub.id} accountName={sub.name} />
-                                </div>
+                                <AccountRowActionsMenu
+                                  accountId={sub.id}
+                                  accountName={sub.name}
+                                  currentParentId={sub.parent_account_id}
+                                  accounts={accounts}
+                                />
                               </td>
                             </tr>
                           ))}

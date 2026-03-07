@@ -18,12 +18,19 @@ export type UserListEntry = {
   email: string | null;
   name: string | null;
   website: string | null;
-  status: "active" | "pending" | "banned";
+  status: UserStatus;
   createdAt: string;
   accounts: UserAccountEntry[];
 };
 
-export type AccountMemberEntry = { userId: string; email: string };
+export type UserStatus = "active" | "pending" | "banned" | "suspended";
+
+export type AccountMemberEntry = {
+  userId: string;
+  email: string;
+  name: string | null;
+  status: UserStatus;
+};
 
 export type AccountListEntry = {
   id: string;
@@ -32,8 +39,16 @@ export type AccountListEntry = {
   parentAccountName: string | null;
   memberCount: number;
   hasSubaccounts: boolean;
+  /** Number of direct sub-accounts (parent_account_id = this account). */
+  subaccountCount: number;
   memberEmails: string[];
   members: AccountMemberEntry[];
+  /** Subscription status (e.g. active, canceled). Null if no subscription. */
+  subscriptionStatus: string | null;
+  /** Plan name (active or last used if canceled). Null if none. */
+  plan: string | null;
+  /** Who is responsible for payment: account name or "Self" when the account pays for itself. */
+  billingResponsible: string | null;
 };
 
 export async function listUsersForAdmin(): Promise<{
@@ -113,7 +128,7 @@ export async function listUsersForAdmin(): Promise<{
     const users: UserListEntry[] = authUsers.map((u) => {
       const profile = profileByUserId.get(u.id);
       let status: UserListEntry["status"] = "active";
-      if (u.banned_until && new Date(u.banned_until) > now) status = "banned";
+      if (u.banned_until && new Date(u.banned_until) > now) status = "suspended";
       else if (!u.email_confirmed_at) status = "pending";
 
       const memberships = membersByUserId.get(u.id) ?? [];
@@ -191,17 +206,32 @@ export async function listAccountsForAdmin(): Promise<{
 
     const allUserIds = [...new Set((allMembers ?? []).map((m) => m.user_id))];
     const emailByUserId = new Map<string, string>();
+    const nameByUserId = new Map<string, string | null>();
+    const statusByUserId = new Map<string, UserStatus>();
     if (allUserIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, display_name")
+        .in("user_id", allUserIds);
+      for (const p of profiles ?? []) {
+        nameByUserId.set(p.user_id, p.display_name ?? null);
+      }
       const {
         data: { users: authUsers },
       } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+      const now = new Date();
       for (const u of authUsers ?? []) {
         if (u.email) emailByUserId.set(u.id, u.email);
+        let status: UserStatus = "active";
+        if (u.banned_until && new Date(u.banned_until) > now) status = "suspended";
+        else if (!u.email_confirmed_at) status = "pending";
+        statusByUserId.set(u.id, status);
       }
     }
 
     const parentAccountNameByAccountId = new Map<string, string>();
     const hasSubaccountsByAccountId = new Map<string, boolean>();
+    const subaccountCountByAccountId = new Map<string, number>();
     for (const a of allAccounts) {
       if (a.parent_account_id) {
         const parent = accountById.get(a.parent_account_id);
@@ -209,6 +239,43 @@ export async function listAccountsForAdmin(): Promise<{
       }
       const children = allAccounts.filter((x) => x.parent_account_id === a.id);
       hasSubaccountsByAccountId.set(a.id, children.length > 0);
+      subaccountCountByAccountId.set(a.id, children.length);
+    }
+
+    const accountIds = allAccounts.map((a) => a.id);
+    const { data: accountBillingRows } = await supabase
+      .from("account_billing")
+      .select("account_id, billing_account_id")
+      .in("account_id", accountIds);
+    const billingAccountIdByAccountId = new Map<string, string>();
+    const billingAccountIds = new Set<string>();
+    for (const row of accountBillingRows ?? []) {
+      billingAccountIdByAccountId.set(row.account_id, row.billing_account_id);
+      billingAccountIds.add(row.billing_account_id);
+    }
+    const ownerAccountIdByBillingAccountId = new Map<string, string>();
+    const subscriptionByBillingAccountId = new Map<string, { status: string; plan: string | null }>();
+    if (billingAccountIds.size > 0) {
+      const { data: billingAccounts } = await supabase
+        .from("billing_accounts")
+        .select("id, owner_account_id")
+        .in("id", [...billingAccountIds]);
+      for (const ba of billingAccounts ?? []) {
+        ownerAccountIdByBillingAccountId.set(ba.id, ba.owner_account_id);
+      }
+      const { data: subscriptionRows } = await supabase
+        .from("subscriptions")
+        .select("billing_account_id, status, plan, updated_at")
+        .in("billing_account_id", [...billingAccountIds])
+        .order("updated_at", { ascending: false });
+      for (const s of subscriptionRows ?? []) {
+        if (!subscriptionByBillingAccountId.has(s.billing_account_id)) {
+          subscriptionByBillingAccountId.set(s.billing_account_id, {
+            status: s.status,
+            plan: s.plan ?? null,
+          });
+        }
+      }
     }
 
     const accounts: AccountListEntry[] = allAccounts.map((a) => {
@@ -219,7 +286,25 @@ export async function listAccountsForAdmin(): Promise<{
       const members: AccountMemberEntry[] = memberIds.map((userId) => ({
         userId,
         email: emailByUserId.get(userId) ?? "",
+        name: nameByUserId.get(userId) ?? null,
+        status: statusByUserId.get(userId) ?? "active",
       }));
+      const billingAccountId = billingAccountIdByAccountId.get(a.id);
+      let subscriptionStatus: string | null = null;
+      let plan: string | null = null;
+      let billingResponsible: string | null = null;
+      if (billingAccountId) {
+        const sub = subscriptionByBillingAccountId.get(billingAccountId);
+        if (sub) {
+          subscriptionStatus = sub.status;
+          plan = sub.plan;
+        }
+        const ownerAccountId = ownerAccountIdByBillingAccountId.get(billingAccountId);
+        if (ownerAccountId) {
+          billingResponsible =
+            ownerAccountId === a.id ? "Self" : (accountById.get(ownerAccountId)?.name ?? null);
+        }
+      }
       return {
         id: a.id,
         name: a.name ?? "",
@@ -227,8 +312,12 @@ export async function listAccountsForAdmin(): Promise<{
         parentAccountName: parentAccountNameByAccountId.get(a.id) ?? null,
         memberCount: memberCountByAccountId.get(a.id) ?? 0,
         hasSubaccounts: hasSubaccountsByAccountId.get(a.id) ?? false,
+        subaccountCount: subaccountCountByAccountId.get(a.id) ?? 0,
         memberEmails,
         members,
+        subscriptionStatus,
+        plan,
+        billingResponsible,
       };
     });
 
@@ -265,6 +354,28 @@ export async function deleteAccountAsAdmin(
   if (membership) return { error: "You cannot delete an account you are a member of" };
 
   const { error } = await supabase.from("accounts").delete().eq("id", accountId);
+  if (error) return { error: error.message };
+  return {};
+}
+
+/**
+ * Rename an account (admin only).
+ */
+export async function renameAccountAsAdmin(
+  accountId: string,
+  newName: string
+): Promise<{ error?: string }> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: "Unauthorized" };
+
+  const trimmed = newName.trim();
+  if (!trimmed) return { error: "Name is required" };
+
+  const supabase = createServiceRoleClient();
+  const { error } = await supabase
+    .from("accounts")
+    .update({ name: trimmed, updated_at: new Date().toISOString() })
+    .eq("id", accountId);
   if (error) return { error: error.message };
   return {};
 }
@@ -359,6 +470,24 @@ export async function moveMemberAsAdmin(
     role: existing.role,
   });
   if (insertError) return { error: insertError.message };
+  return {};
+}
+
+/**
+ * Suspend a user (admin only). Sets banned_until so they cannot sign in. Does not delete the user.
+ */
+export async function suspendUserAsAdmin(userId: string): Promise<{ error?: string }> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: "Unauthorized" };
+  if (admin.user.id === userId) return { error: "You cannot suspend your own account" };
+
+  const supabase = createServiceRoleClient();
+  const bannedUntil = new Date();
+  bannedUntil.setFullYear(bannedUntil.getFullYear() + 10);
+  const { error } = await supabase.auth.admin.updateUserById(userId, {
+    banned_until: bannedUntil.toISOString(),
+  });
+  if (error) return { error: error.message };
   return {};
 }
 

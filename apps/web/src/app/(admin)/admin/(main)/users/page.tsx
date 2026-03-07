@@ -11,9 +11,6 @@ export default async function AdminUsersPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Users</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Users who have signed up. Name and website come from their profile (onboarding or account).
-      </p>
       <AdminUsersContent
         users={users}
         accounts={accounts}

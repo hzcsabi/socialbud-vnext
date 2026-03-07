@@ -16,13 +16,31 @@ import {
 import { deleteUserAsAdmin } from "./actions";
 import { cn } from "@/lib/utils";
 
-type Props = { userId: string; email: string | null; disabled?: boolean };
+type Props = {
+  userId: string;
+  email: string | null;
+  disabled?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+};
 
 type Message = { type: "success" | "error" | "warning"; text: string } | null;
 
-export function DeleteUserButton({ userId, email, disabled }: Props) {
+export function DeleteUserButton({
+  userId,
+  email,
+  disabled,
+  open: controlledOpen,
+  onOpenChange,
+}: Props) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (value: boolean) => {
+    if (!isControlled) setInternalOpen(value);
+    onOpenChange?.(value);
+  };
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<Message>(null);
 
@@ -48,16 +66,18 @@ export function DeleteUserButton({ userId, email, disabled }: Props) {
   return (
     <div className="flex flex-col items-end gap-1">
       <AlertDialog open={open} onOpenChange={(value) => setOpen(value === true)}>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => setOpen(true)}
-          disabled={disabled || loading}
-          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-        >
-          {loading ? "Deleting…" : "Delete"}
-        </Button>
+        {!isControlled && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setOpen(true)}
+            disabled={disabled || loading}
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+          >
+            {loading ? "Deleting…" : "Delete"}
+          </Button>
+        )}
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete user</AlertDialogTitle>

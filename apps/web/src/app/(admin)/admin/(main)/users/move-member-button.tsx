@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -22,16 +22,39 @@ type Props = {
   fromAccountId: string;
   fromAccountName: string;
   accounts: AccountListEntry[];
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
-export function MoveMemberButton({ userId, email, fromAccountId, fromAccountName, accounts }: Props) {
+export function MoveMemberButton({
+  userId,
+  email,
+  fromAccountId,
+  fromAccountName,
+  accounts,
+  open: controlledOpen,
+  onOpenChange,
+}: Props) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (value: boolean) => {
+    if (!isControlled) setInternalOpen(value);
+    onOpenChange?.(value);
+  };
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string>("");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
   const targetAccounts = accounts.filter((a) => a.id !== fromAccountId);
+
+  useEffect(() => {
+    if (open) {
+      setSelectedId("");
+      setMessage(null);
+    }
+  }, [open]);
 
   async function handleConfirm() {
     if (!selectedId) return;
@@ -48,22 +71,26 @@ export function MoveMemberButton({ userId, email, fromAccountId, fromAccountName
     router.refresh();
   }
 
+  const openDialog = () => {
+    setSelectedId("");
+    setMessage(null);
+    setOpen(true);
+  };
+
   return (
     <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="text-xs"
-        onClick={() => {
-          setSelectedId("");
-          setMessage(null);
-          setOpen(true);
-        }}
-        disabled={loading || targetAccounts.length === 0}
-      >
-        Move
-      </Button>
+      {!isControlled && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-xs"
+          onClick={openDialog}
+          disabled={loading || targetAccounts.length === 0}
+        >
+          Move
+        </Button>
+      )}
       <AlertDialog open={open} onOpenChange={(v) => setOpen(v === true)}>
         <AlertDialogContent>
           <AlertDialogHeader>

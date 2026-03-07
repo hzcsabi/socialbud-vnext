@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -35,11 +35,26 @@ type Props = {
   accountName: string;
   currentParentId: string | null;
   accounts: AccountListEntry[];
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
-export function SetAccountParentButton({ accountId, accountName, currentParentId, accounts }: Props) {
+export function SetAccountParentButton({
+  accountId,
+  accountName,
+  currentParentId,
+  accounts,
+  open: controlledOpen,
+  onOpenChange,
+}: Props) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (value: boolean) => {
+    if (!isControlled) setInternalOpen(value);
+    onOpenChange?.(value);
+  };
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string>("");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
@@ -49,6 +64,13 @@ export function SetAccountParentButton({ accountId, accountName, currentParentId
     () => accounts.filter((a) => a.id !== accountId && !descendantIds.has(a.id)),
     [accounts, accountId, descendantIds]
   );
+
+  useEffect(() => {
+    if (open) {
+      setSelectedId(currentParentId ?? "");
+      setMessage(null);
+    }
+  }, [open, currentParentId]);
 
   async function handleConfirm() {
     const value = selectedId === "" ? null : selectedId;
@@ -65,21 +87,25 @@ export function SetAccountParentButton({ accountId, accountName, currentParentId
     router.refresh();
   }
 
+  const openDialog = () => {
+    setSelectedId(currentParentId ?? "");
+    setMessage(null);
+    setOpen(true);
+  };
+
   return (
     <div className="flex flex-col items-end gap-1">
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={() => {
-          setSelectedId(currentParentId ?? "");
-          setMessage(null);
-          setOpen(true);
-        }}
-        disabled={loading}
-      >
-        Set parent
-      </Button>
+      {!isControlled && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={openDialog}
+          disabled={loading}
+        >
+          Set parent
+        </Button>
+      )}
       <AlertDialog open={open} onOpenChange={(v) => setOpen(v === true)}>
         <AlertDialogContent>
           <AlertDialogHeader>
