@@ -71,6 +71,7 @@ export function AdminUsersContent({
   const [userPage, setUserPage] = useState(1);
   const [accountPage, setAccountPage] = useState(1);
   const [expandedParentIds, setExpandedParentIds] = useState<Set<string>>(new Set());
+  const [expandedMemberIds, setExpandedMemberIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setAccountPage(1);
@@ -81,6 +82,15 @@ export function AdminUsersContent({
       const next = new Set(prev);
       if (next.has(parentId)) next.delete(parentId);
       else next.add(parentId);
+      return next;
+    });
+  };
+
+  const toggleMembersExpanded = (accountId: string) => {
+    setExpandedMemberIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(accountId)) next.delete(accountId);
+      else next.add(accountId);
       return next;
     });
   };
@@ -414,17 +424,34 @@ export function AdminUsersContent({
                   <tbody>
                     {paginatedAccounts.map((a) => {
                       const subaccounts = accountTab === "parent" ? (subaccountsByParentId.get(a.id) ?? []) : [];
-                      const isExpanded = expandedParentIds.has(a.id);
+                      const parentExpanded = expandedParentIds.has(a.id);
+                      const membersExpanded = expandedMemberIds.has(a.id);
+                      const showExpand =
+                        (accountTab === "parent" && a.hasSubaccounts) ||
+                        (accountTab === "individual" && a.memberCount > 0);
+                      const isExpanded = accountTab === "parent" ? parentExpanded : membersExpanded;
                       return (
                         <React.Fragment key={a.id}>
                           <tr className="border-b border-border last:border-0">
                             <td className="w-8 px-2 py-3">
-                              {accountTab === "parent" && a.hasSubaccounts ? (
+                              {showExpand ? (
                                 <button
                                   type="button"
-                                  onClick={() => toggleParentExpanded(a.id)}
+                                  onClick={() =>
+                                    accountTab === "parent"
+                                      ? toggleParentExpanded(a.id)
+                                      : toggleMembersExpanded(a.id)
+                                  }
                                   aria-expanded={isExpanded}
-                                  aria-label={isExpanded ? "Collapse sub-accounts" : "Expand sub-accounts"}
+                                  aria-label={
+                                    accountTab === "parent"
+                                      ? isExpanded
+                                        ? "Collapse sub-accounts"
+                                        : "Expand sub-accounts"
+                                      : isExpanded
+                                        ? "Collapse members"
+                                        : "Expand members"
+                                  }
                                   className="flex size-6 items-center justify-center rounded hover:bg-muted"
                                 >
                                   <span className="text-muted-foreground" aria-hidden>
@@ -450,7 +477,24 @@ export function AdminUsersContent({
                                 : a.memberEmails.join(", ")}
                             </td>
                           </tr>
-                          {accountTab === "parent" && isExpanded && subaccounts.map((sub) => (
+                          {accountTab === "individual" && membersExpanded && (
+                            <tr className="border-b border-border bg-muted/30 last:border-0">
+                              <td className="w-8 px-2 py-3" />
+                              <td colSpan={5} className="px-4 py-3 pl-10 text-muted-foreground">
+                                <span className="text-xs font-medium">Members: </span>
+                                {a.memberEmails.length === 0 ? (
+                                  <span className="text-xs">No members</span>
+                                ) : (
+                                  <ul className="mt-1 list-inside list-disc text-xs">
+                                    {a.memberEmails.map((email) => (
+                                      <li key={email}>{email}</li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </td>
+                            </tr>
+                          )}
+                          {accountTab === "parent" && parentExpanded && subaccounts.map((sub) => (
                             <tr key={sub.id} className="border-b border-border bg-muted/30 last:border-0">
                               <td className="w-8 px-2 py-3" />
                               <td className="px-4 py-3 pl-10 font-medium text-muted-foreground">
