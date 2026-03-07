@@ -26,7 +26,7 @@ export type UserListEntry = {
 
 export type UserStatus = "active" | "pending" | "banned" | "suspended" | "deleted";
 
-export type MemberRole = "owner" | "admin" | "member";
+export type MemberRole = "owner" | "manager" | "member";
 
 export type AccountMemberEntry = {
   userId: string;
@@ -222,7 +222,7 @@ export async function listAccountsForAdmin(): Promise<{
       const list = userIdsByAccountId.get(m.account_id) ?? [];
       list.push(m.user_id);
       userIdsByAccountId.set(m.account_id, list);
-      const role = m.role === "owner" || m.role === "admin" || m.role === "member" ? m.role : "member";
+      const role = m.role === "owner" || m.role === "manager" || m.role === "member" ? m.role : "member";
       roleByAccountAndUser.set(`${m.account_id}:${m.user_id}`, role);
     }
 
@@ -514,9 +514,9 @@ export async function moveMemberAsAdmin(
 }
 
 /**
- * Set a member's role in an account (admin only). Role must be owner, admin, or member.
+ * Set a member's role in an account (admin only). Role must be owner, manager, or member.
  * Ensures the account always has exactly one owner: demoting the only owner is rejected;
- * promoting someone to owner demotes any existing owner(s) to admin.
+ * promoting someone to owner demotes any existing owner(s) to manager.
  */
 export async function setAccountMemberRoleAsAdmin(
   accountId: string,
@@ -548,7 +548,7 @@ export async function setAccountMemberRoleAsAdmin(
     for (const ownerId of ownerUserIds) {
       const { error: demoteError } = await supabase
         .from("account_members")
-        .update({ role: "admin" })
+        .update({ role: "manager" })
         .eq("account_id", accountId)
         .eq("user_id", ownerId);
       if (demoteError) return { error: demoteError.message };
@@ -587,7 +587,7 @@ export async function setAccountMemberRoleAsAdmin(
 }
 
 /**
- * Add a user as a member of an account (admin only). If role is owner, any existing owner is demoted to admin.
+ * Add a user as a member of an account (admin only). If role is owner, any existing owner is demoted to manager.
  * Fails if user is already a member of the account.
  */
 export async function addMemberToAccountAsAdmin(
@@ -618,7 +618,7 @@ export async function addMemberToAccountAsAdmin(
     for (const row of currentOwners ?? []) {
       const { error: demoteError } = await supabase
         .from("account_members")
-        .update({ role: "admin" })
+        .update({ role: "manager" })
         .eq("account_id", accountId)
         .eq("user_id", row.user_id);
       if (demoteError) return { error: demoteError.message };

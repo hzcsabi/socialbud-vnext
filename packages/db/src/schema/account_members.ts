@@ -1,4 +1,4 @@
-export type MemberRole = "owner" | "admin" | "member";
+export type MemberRole = "owner" | "manager" | "member";
 
 export interface AccountMemberRow {
   id: string;
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS account_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'member')),
+  role TEXT NOT NULL CHECK (role IN ('owner', 'manager', 'member')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT uq_account_members_account_user UNIQUE (account_id, user_id)
 );
@@ -36,14 +36,14 @@ CREATE POLICY "Users can select members of their accounts"
     )
   );
 
-CREATE POLICY "Owners and admins can manage members"
+CREATE POLICY "Owners and managers can manage members"
   ON account_members FOR ALL
   USING (
     EXISTS (
       SELECT 1 FROM account_members am
       WHERE am.account_id = account_members.account_id
         AND am.user_id = auth.uid()
-        AND am.role IN ('owner', 'admin')
+        AND am.role IN ('owner', 'manager')
     )
   )
   WITH CHECK (
@@ -51,7 +51,7 @@ CREATE POLICY "Owners and admins can manage members"
       SELECT 1 FROM account_members am
       WHERE am.account_id = account_members.account_id
         AND am.user_id = auth.uid()
-        AND am.role IN ('owner', 'admin')
+        AND am.role IN ('owner', 'manager')
     )
   );
 `;

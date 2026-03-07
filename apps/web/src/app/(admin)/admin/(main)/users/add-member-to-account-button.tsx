@@ -15,14 +15,14 @@ import {
 import { addMemberToAccountAsAdmin } from "./actions";
 import type { UserListEntry, MemberRole } from "./actions";
 
-const ROLES: MemberRole[] = ["member", "admin", "owner"];
+const ROLES: MemberRole[] = ["member", "manager", "owner"];
 
 function roleLabel(role: MemberRole) {
   switch (role) {
     case "owner":
       return "Owner";
-    case "admin":
-      return "Admin";
+    case "manager":
+      return "Manager";
     case "member":
       return "Member";
     default:

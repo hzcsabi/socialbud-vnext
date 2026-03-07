@@ -17,7 +17,7 @@ export default async function TeamAccessPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Team access</h1>
+      <h1 className="text-xl font-semibold">Admins</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Users listed here can sign in to the admin area at /admin.
       </p>

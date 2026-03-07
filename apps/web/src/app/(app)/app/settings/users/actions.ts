@@ -19,7 +19,7 @@ function appOrigin(): string {
   );
 }
 
-async function ensureOwnerOrAdmin(accountId: string): Promise<boolean> {
+async function ensureOwnerOrManager(accountId: string): Promise<boolean> {
   const account = await getCurrentUserAccount();
   return account?.id === accountId;
 }
@@ -34,7 +34,7 @@ export type MemberRow = {
 export async function listMembers(
   accountId: string
 ): Promise<{ members: MemberRow[]; error?: string }> {
-  const ok = await ensureOwnerOrAdmin(accountId);
+  const ok = await ensureOwnerOrManager(accountId);
   if (!ok) return { members: [], error: "Unauthorized" };
 
   try {
@@ -86,7 +86,7 @@ export type PendingInvitationRow = {
 export async function listPendingInvitations(
   accountId: string
 ): Promise<{ invitations: PendingInvitationRow[]; error?: string }> {
-  const ok = await ensureOwnerOrAdmin(accountId);
+  const ok = await ensureOwnerOrManager(accountId);
   if (!ok) return { invitations: [], error: "Unauthorized" };
 
   const supabase = await createClient();

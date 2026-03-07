@@ -20,14 +20,14 @@ import { suspendUserAsAdmin, unsuspendUserAsAdmin, setAccountMemberRoleAsAdmin }
 import type { AccountListEntry, MemberRole, UserStatus } from "./actions";
 import { cn } from "@/lib/utils";
 
-const ROLES: MemberRole[] = ["owner", "admin", "member"];
+const ROLES: MemberRole[] = ["owner", "manager", "member"];
 
 function roleLabel(role: MemberRole) {
   switch (role) {
     case "owner":
       return "Owner";
-    case "admin":
-      return "Admin";
+    case "manager":
+      return "Manager";
     case "member":
       return "Member";
     default:
@@ -261,7 +261,7 @@ export function UserRowActionsMenu({
           <AlertDialogHeader>
             <AlertDialogTitle>Change role</AlertDialogTitle>
             <AlertDialogDescription>
-              Set the role for this member in {fromAccountName ?? "this account"}. Owner and Admin can manage members.
+              Set the role for this member in {fromAccountName ?? "this account"}. Owner and Manager can manage members.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">

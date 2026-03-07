@@ -74,7 +74,7 @@ export default async function AdminMainLayout({
               "block rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
             )}
           >
-            Team access
+            Admins
           </Link>
           <Link
             href="/admin/corporations"

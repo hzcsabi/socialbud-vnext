@@ -55,8 +55,8 @@ function roleLabel(role: MemberRole) {
   switch (role) {
     case "owner":
       return "Owner";
-    case "admin":
-      return "Admin";
+    case "manager":
+      return "Manager";
     case "member":
       return "Member";
     default:
@@ -68,7 +68,7 @@ function roleClass(role: MemberRole) {
   switch (role) {
     case "owner":
       return "bg-amber-500/15 text-amber-700 dark:text-amber-400";
-    case "admin":
+    case "manager":
       return "bg-blue-500/15 text-blue-700 dark:text-blue-400";
     case "member":
       return "bg-muted text-muted-foreground";

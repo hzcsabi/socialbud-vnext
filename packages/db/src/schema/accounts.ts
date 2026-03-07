@@ -44,14 +44,14 @@ CREATE POLICY "Users can select accounts they are members of"
     )
   );
 
-CREATE POLICY "Owners and admins can update their accounts"
+CREATE POLICY "Owners and managers can update their accounts"
   ON accounts FOR UPDATE
   USING (
     EXISTS (
       SELECT 1 FROM account_members
       WHERE account_members.account_id = accounts.id
         AND account_members.user_id = auth.uid()
-        AND account_members.role IN ('owner', 'admin')
+        AND account_members.role IN ('owner', 'manager')
     )
   );
 `;
