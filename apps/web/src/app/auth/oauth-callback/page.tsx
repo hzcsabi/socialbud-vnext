@@ -24,7 +24,7 @@ function OAuthCallbackContent() {
       return;
     }
     const nextPath = searchParams.get("next")?.trim();
-    const allowed = nextPath && /^\/[^:]*$/.test(nextPath) ? nextPath : "/app";
+    const allowed = nextPath && /^\/[^:]*$/.test(nextPath) ? nextPath : "/select-account";
     handled.current = true;
 
     const timeoutId = window.setTimeout(() => {

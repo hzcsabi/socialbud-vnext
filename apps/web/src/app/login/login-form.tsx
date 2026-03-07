@@ -28,7 +28,7 @@ export function LoginForm({ nextUrl }: Props) {
       setMessage(error.message);
       return;
     }
-    router.push(nextUrl ?? "/app");
+    router.push(nextUrl ?? "/select-account");
     router.refresh();
   }
 

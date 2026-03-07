@@ -27,7 +27,7 @@ export default async function ForgotPasswordPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (user) redirect("/app");
+  if (user) redirect("/select-account");
 
   return (
     <main className="flex min-h-screen items-center justify-center p-4">

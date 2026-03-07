@@ -39,7 +39,7 @@ export default async function LoginPage({
   if (user) {
     const params = await searchParams;
     const nextPath = params.next?.trim();
-    const destination = nextPath && isAllowedRedirect(nextPath) ? nextPath : "/app";
+    const destination = nextPath && isAllowedRedirect(nextPath) ? nextPath : "/select-account";
     redirect(destination);
   }
 

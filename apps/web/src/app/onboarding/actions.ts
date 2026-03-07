@@ -39,5 +39,5 @@ export async function submitOnboarding(formData: FormData) {
     return { error: msg };
   }
 
-  redirect("/app");
+  redirect("/select-account");
 }

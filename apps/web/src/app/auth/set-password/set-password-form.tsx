@@ -32,7 +32,7 @@ export function SetPasswordForm() {
       setMessage(error.message);
       return;
     }
-    router.push("/app");
+    router.push("/select-account");
     router.refresh();
   }
 

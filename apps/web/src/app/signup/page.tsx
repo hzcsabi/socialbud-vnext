@@ -31,7 +31,7 @@ export default async function SignupPage({ searchParams }: Props) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (user) redirect("/app");
+  if (user) redirect("/select-account");
 
   const params = await searchParams;
   const invitationToken = params.invitation?.trim() ?? "";

@@ -29,7 +29,7 @@ export function AuthHashHandler() {
       supabase.auth
         .exchangeCodeForSession(code)
         .then(() => {
-          const nextPath = "/app";
+          const nextPath = "/select-account";
           window.history.replaceState(null, "", pathname ?? "/");
           router.push(nextPath);
           router.refresh();
@@ -55,7 +55,7 @@ export function AuthHashHandler() {
       ? "/auth/set-password"
       : goToOnboarding
         ? "/onboarding"
-        : "/app";
+        : "/select-account";
     supabase.auth
       .setSession({ access_token: accessToken, refresh_token: refreshToken })
       .then(() => {

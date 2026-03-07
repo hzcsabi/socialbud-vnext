@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const tokenHash = url.searchParams.get("token_hash");
   const type = url.searchParams.get("type");
-  const nextPath = url.searchParams.get("next") ?? "/app";
+  const nextPath = url.searchParams.get("next") ?? "/select-account";
 
   if (!tokenHash || !type) {
     return NextResponse.redirect(new URL("/login?error=missing_params", url.origin), {
@@ -38,6 +38,6 @@ export async function GET(request: NextRequest) {
   }
 
   const allowedNext = nextPath.startsWith("/") && !nextPath.startsWith("//") && !nextPath.includes(":");
-  const destination = allowedNext ? nextPath : "/app";
+  const destination = allowedNext ? nextPath : "/select-account";
   return NextResponse.redirect(new URL(destination, url.origin), { status: 302 });
 }

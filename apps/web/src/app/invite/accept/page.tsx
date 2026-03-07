@@ -49,7 +49,7 @@ export default async function InviteAcceptPage({ searchParams }: Props) {
     if (userEmail === inviteEmail) {
       const result = await acceptInvitation(token);
       if (!result.error) {
-        redirect("/app");
+        redirect("/select-account");
       }
       return (
         <main className="flex min-h-screen items-center justify-center p-4">
@@ -57,7 +57,7 @@ export default async function InviteAcceptPage({ searchParams }: Props) {
             <h1 className="text-xl font-semibold">Something went wrong</h1>
             <p className="text-destructive">{result.error}</p>
             <Button asChild>
-              <Link href="/app">Go to app</Link>
+              <Link href="/select-account">Go to app</Link>
             </Button>
           </div>
         </main>

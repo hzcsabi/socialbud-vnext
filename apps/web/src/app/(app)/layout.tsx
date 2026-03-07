@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { ConfigError } from "./config-error";
 import { cn } from "@/lib/utils";
+import { getCurrentUserAccount, listUserAccounts } from "@/lib/account";
+import { AccountSwitcher } from "./account-switcher";
 
 export default async function AppLayout({
   children,
@@ -39,6 +41,11 @@ export default async function AppLayout({
   const displayName = profile.display_name?.trim() || user.email || "Account";
   const isSuspended =
     profile?.suspended_at != null && new Date(profile.suspended_at) > new Date();
+
+  const currentAccount = await getCurrentUserAccount();
+  if (!currentAccount) redirect("/select-account");
+
+  const accounts = await listUserAccounts();
 
   if (isSuspended) {
     return (
@@ -93,6 +100,9 @@ export default async function AppLayout({
               height={32}
             />
           </Link>
+        </div>
+        <div className="border-b border-border px-2 py-2">
+          <AccountSwitcher currentAccount={currentAccount} accounts={accounts} />
         </div>
         <nav className="flex-1 space-y-0.5 p-3">
           <Link
