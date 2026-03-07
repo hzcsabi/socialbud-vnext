@@ -99,17 +99,26 @@ export async function listUsersForAdmin(options?: { includeDeleted?: boolean }):
         }
 
         const memberships = membersByUserId.get(u.id) ?? [];
-        const accounts: UserAccountEntry[] = memberships.map((m) => {
-          const account = accountById.get(m.account_id);
-          return {
-            accountId: m.account_id,
-            accountName: account?.name ?? "",
-            role: m.role,
-            memberCount: memberCountByAccountId.get(m.account_id) ?? 0,
-            parentAccountName: parentAccountNameByAccountId.get(m.account_id) ?? null,
-            hasSubaccounts: hasSubaccountsByAccountId.get(m.account_id) ?? false,
-          };
-        });
+        // Dedupe by account_id (keep first; duplicate rows in account_members would otherwise show same account twice)
+        const seenAccountIds = new Set<string>();
+        const accounts: UserAccountEntry[] = memberships
+          .filter((m) => {
+            if (seenAccountIds.has(m.account_id)) return false;
+            seenAccountIds.add(m.account_id);
+            return true;
+          })
+          .map((m) => {
+            const account = accountById.get(m.account_id);
+            const rawName = account?.name?.trim() ?? "";
+            return {
+              accountId: m.account_id,
+              accountName: rawName || "Unnamed account",
+              role: m.role,
+              memberCount: memberCountByAccountId.get(m.account_id) ?? 0,
+              parentAccountName: parentAccountNameByAccountId.get(m.account_id) ?? null,
+              hasSubaccounts: hasSubaccountsByAccountId.get(m.account_id) ?? false,
+            };
+          });
 
         return {
           id: u.id,

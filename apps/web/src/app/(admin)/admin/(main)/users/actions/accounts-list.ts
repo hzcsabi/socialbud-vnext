@@ -21,14 +21,17 @@ export async function listAccountsForAdmin(): Promise<{
     if (!allAccounts?.length) return { accounts: [] };
 
     const accountById = new Map(
-      allAccounts.map((a) => [
-        a.id,
-        {
-          id: a.id,
-          name: a.name ?? "",
-          parent_account_id: a.parent_account_id ?? null,
-        },
-      ])
+      allAccounts.map((a) => {
+        const rawName = (a.name ?? "").trim();
+        return [
+          a.id,
+          {
+            id: a.id,
+            name: rawName || "Unnamed account",
+            parent_account_id: a.parent_account_id ?? null,
+          },
+        ];
+      })
     );
 
     const { data: allMembers } = await supabase
@@ -159,9 +162,10 @@ export async function listAccountsForAdmin(): Promise<{
             ownerAccountId === a.id ? "Self" : (accountById.get(ownerAccountId)?.name ?? null);
         }
       }
+      const rawName = (a.name ?? "").trim();
       return {
         id: a.id,
-        name: a.name ?? "",
+        name: rawName || "Unnamed account",
         parent_account_id: a.parent_account_id ?? null,
         parentAccountName: parentAccountNameByAccountId.get(a.id) ?? null,
         memberCount: memberIds.length,
