@@ -23,14 +23,14 @@ const TABS: { id: TabId; label: string }[] = [
 
 type Props = {
   profile: ProfileData;
-  organization: { id: string; name: string } | null;
+  account: { id: string; name: string } | null;
   members: MemberRow[];
   pendingInvitations: PendingInvitationRow[];
 };
 
 export function SettingsTabs({
   profile,
-  organization,
+  account,
   members,
   pendingInvitations,
 }: Props) {
@@ -97,9 +97,9 @@ export function SettingsTabs({
         className="mt-6"
       >
         {active === "users" &&
-          (organization ? (
+          (account ? (
             <UsersTabContent
-              organization={organization}
+              account={account}
               members={members}
               pendingInvitations={pendingInvitations}
             />

@@ -3,9 +3,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/server-admin";
 import {
-  getCurrentUserOrganization,
-  ensureCurrentUserOrganization,
-} from "@/lib/organization";
+  getCurrentUserAccount,
+  ensureCurrentUserAccount,
+} from "@/lib/account";
 import { sendInvitationEmail } from "@/lib/email";
 
 const INVITATION_EXPIRY_DAYS = 7;
@@ -19,9 +19,9 @@ function appOrigin(): string {
   );
 }
 
-async function ensureOwnerOrAdmin(organizationId: string): Promise<boolean> {
-  const org = await getCurrentUserOrganization();
-  return org?.id === organizationId;
+async function ensureOwnerOrAdmin(accountId: string): Promise<boolean> {
+  const account = await getCurrentUserAccount();
+  return account?.id === accountId;
 }
 
 export type MemberRow = {
@@ -32,17 +32,17 @@ export type MemberRow = {
 };
 
 export async function listMembers(
-  organizationId: string
+  accountId: string
 ): Promise<{ members: MemberRow[]; error?: string }> {
-  const ok = await ensureOwnerOrAdmin(organizationId);
+  const ok = await ensureOwnerOrAdmin(accountId);
   if (!ok) return { members: [], error: "Unauthorized" };
 
   try {
     const supabase = await createClient();
     const { data: rows, error: listError } = await supabase
-      .from("organization_members")
+      .from("account_members")
       .select("user_id, role")
-      .eq("organization_id", organizationId)
+      .eq("account_id", accountId)
       .order("created_at", { ascending: true });
 
     if (listError) return { members: [], error: listError.message };
@@ -84,16 +84,16 @@ export type PendingInvitationRow = {
 };
 
 export async function listPendingInvitations(
-  organizationId: string
+  accountId: string
 ): Promise<{ invitations: PendingInvitationRow[]; error?: string }> {
-  const ok = await ensureOwnerOrAdmin(organizationId);
+  const ok = await ensureOwnerOrAdmin(accountId);
   if (!ok) return { invitations: [], error: "Unauthorized" };
 
   const supabase = await createClient();
   const { data: rows, error } = await supabase
-    .from("organization_invitations")
+    .from("account_invitations")
     .select("id, email, created_at")
-    .eq("organization_id", organizationId)
+    .eq("account_id", accountId)
     .eq("status", "pending")
     .order("created_at", { ascending: false });
 
@@ -108,7 +108,7 @@ export async function listPendingInvitations(
 }
 
 export async function createInvitation(
-  organizationId: string,
+  accountId: string,
   email: string
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
@@ -121,18 +121,18 @@ export async function createInvitation(
     };
   }
 
-  let org = await getCurrentUserOrganization();
-  if (!org) {
+  let account = await getCurrentUserAccount();
+  if (!account) {
     try {
-      await ensureCurrentUserOrganization();
-      org = await getCurrentUserOrganization();
+      await ensureCurrentUserAccount();
+      account = await getCurrentUserAccount();
     } catch {
       // ensure failed (e.g. service role env missing)
     }
   }
-  if (!org || org.id !== organizationId) {
+  if (!account || account.id !== accountId) {
     return {
-      error: org
+      error: account
         ? "Unauthorized"
         : "Your workspace could not be loaded. Please refresh the page and try again.",
     };
@@ -145,9 +145,9 @@ export async function createInvitation(
     const adminSupabase = createServiceRoleClient();
 
     const { data: members } = await adminSupabase
-      .from("organization_members")
+      .from("account_members")
       .select("user_id")
-      .eq("organization_id", organizationId);
+      .eq("account_id", accountId);
 
     const userIds = (members ?? []).map((m) => m.user_id);
     for (const uid of userIds) {
@@ -164,9 +164,9 @@ export async function createInvitation(
     const token = crypto.randomUUID();
 
     const { error: insertError } = await supabase
-      .from("organization_invitations")
+      .from("account_invitations")
       .insert({
-        organization_id: organizationId,
+        account_id: accountId,
         email: trimmed,
         invited_by_user_id: authUser.id,
         token,
@@ -191,7 +191,7 @@ export async function createInvitation(
     const { sent, error: emailError } = await sendInvitationEmail({
       to: trimmed,
       inviterDisplayName: profile?.display_name ?? authUser.email ?? "A teammate",
-      organizationName: org.name,
+      accountName: account.name,
       acceptLink,
     });
 
@@ -207,7 +207,7 @@ export async function createInvitation(
 
 export async function revokeInvitation(
   invitationId: string,
-  organizationId: string
+  accountId: string
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const {
@@ -218,28 +218,28 @@ export async function revokeInvitation(
       error: "Not authenticated. Please refresh the page and try again.",
     };
   }
-  let org = await getCurrentUserOrganization();
-  if (!org) {
+  let account = await getCurrentUserAccount();
+  if (!account) {
     try {
-      await ensureCurrentUserOrganization();
-      org = await getCurrentUserOrganization();
+      await ensureCurrentUserAccount();
+      account = await getCurrentUserAccount();
     } catch {
       // ignore
     }
   }
-  if (!org || org.id !== organizationId) {
+  if (!account || account.id !== accountId) {
     return {
-      error: org
+      error: account
         ? "Unauthorized"
         : "Your workspace could not be loaded. Please refresh the page and try again.",
     };
   }
 
   const { error } = await supabase
-    .from("organization_invitations")
+    .from("account_invitations")
     .update({ status: "revoked" })
     .eq("id", invitationId)
-    .eq("organization_id", organizationId)
+    .eq("account_id", accountId)
     .eq("status", "pending");
 
   if (error) return { error: error.message };
@@ -248,7 +248,7 @@ export async function revokeInvitation(
 
 export async function resendInvitation(
   invitationId: string,
-  organizationId: string
+  accountId: string
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
   const {
@@ -259,28 +259,28 @@ export async function resendInvitation(
       error: "Not authenticated. Please refresh the page and try again.",
     };
   }
-  let org = await getCurrentUserOrganization();
-  if (!org) {
+  let account = await getCurrentUserAccount();
+  if (!account) {
     try {
-      await ensureCurrentUserOrganization();
-      org = await getCurrentUserOrganization();
+      await ensureCurrentUserAccount();
+      account = await getCurrentUserAccount();
     } catch {
       // ignore
     }
   }
-  if (!org || org.id !== organizationId) {
+  if (!account || account.id !== accountId) {
     return {
-      error: org
+      error: account
         ? "Unauthorized"
         : "Your workspace could not be loaded. Please refresh the page and try again.",
     };
   }
 
   const { data: row, error: fetchError } = await supabase
-    .from("organization_invitations")
+    .from("account_invitations")
     .select("id, email, token")
     .eq("id", invitationId)
-    .eq("organization_id", organizationId)
+    .eq("account_id", accountId)
     .eq("status", "pending")
     .single();
 
@@ -290,7 +290,7 @@ export async function resendInvitation(
   expiresAt.setDate(expiresAt.getDate() + INVITATION_EXPIRY_DAYS);
 
   await supabase
-    .from("organization_invitations")
+    .from("account_invitations")
     .update({ expires_at: expiresAt.toISOString() })
     .eq("id", invitationId);
 
@@ -304,7 +304,7 @@ export async function resendInvitation(
   const { sent, error: emailError } = await sendInvitationEmail({
     to: row.email,
     inviterDisplayName: profile?.display_name ?? authUser.email ?? "A teammate",
-    organizationName: org.name,
+    accountName: account.name,
     acceptLink,
   });
 

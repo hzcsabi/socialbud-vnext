@@ -4,13 +4,13 @@ import { getAdminUser } from "@/lib/admin";
 import { sendAccountDeletedEmail } from "@/lib/email";
 import { createServiceRoleClient } from "@/lib/supabase/server-admin";
 
-export type UserOrgEntry = {
-  orgId: string;
-  orgName: string;
+export type UserAccountEntry = {
+  accountId: string;
+  accountName: string;
   role: string;
   memberCount: number;
-  parentOrgName: string | null;
-  hasSuborgs: boolean;
+  parentAccountName: string | null;
+  hasSubaccounts: boolean;
 };
 
 export type UserListEntry = {
@@ -20,15 +20,16 @@ export type UserListEntry = {
   website: string | null;
   status: "active" | "pending" | "banned";
   createdAt: string;
-  organizations: UserOrgEntry[];
+  accounts: UserAccountEntry[];
 };
 
-export type OrganizationListEntry = {
+export type AccountListEntry = {
   id: string;
   name: string;
-  parentOrgName: string | null;
+  parent_account_id: string | null;
+  parentAccountName: string | null;
   memberCount: number;
-  hasSuborgs: boolean;
+  hasSubaccounts: boolean;
   memberEmails: string[];
 };
 
@@ -57,51 +58,51 @@ export async function listUsersForAdmin(): Promise<{
       (profiles ?? []).map((p) => [p.user_id, p])
     );
 
-    const { data: allOrgs } = await supabase
-      .from("organizations")
-      .select("id, name, parent_organization_id");
+    const { data: allAccounts } = await supabase
+      .from("accounts")
+      .select("id, name, parent_account_id");
 
-    const orgById = new Map(
-      (allOrgs ?? []).map((o) => [
-        o.id,
+    const accountById = new Map(
+      (allAccounts ?? []).map((a) => [
+        a.id,
         {
-          id: o.id,
-          name: o.name ?? "",
-          parent_organization_id: o.parent_organization_id ?? null,
+          id: a.id,
+          name: a.name ?? "",
+          parent_account_id: a.parent_account_id ?? null,
         },
       ])
     );
 
-    const parentOrgNameByOrgId = new Map<string, string>();
-    const hasSuborgsByOrgId = new Map<string, boolean>();
-    for (const o of allOrgs ?? []) {
-      if (o.parent_organization_id) {
-        const parent = orgById.get(o.parent_organization_id);
-        parentOrgNameByOrgId.set(o.id, parent?.name ?? "");
+    const parentAccountNameByAccountId = new Map<string, string>();
+    const hasSubaccountsByAccountId = new Map<string, boolean>();
+    for (const a of allAccounts ?? []) {
+      if (a.parent_account_id) {
+        const parent = accountById.get(a.parent_account_id);
+        parentAccountNameByAccountId.set(a.id, parent?.name ?? "");
       }
-      const children = (allOrgs ?? []).filter(
-        (x) => x.parent_organization_id === o.id
+      const children = (allAccounts ?? []).filter(
+        (x) => x.parent_account_id === a.id
       );
-      hasSuborgsByOrgId.set(o.id, children.length > 0);
+      hasSubaccountsByAccountId.set(a.id, children.length > 0);
     }
 
     const { data: allMembers } = await supabase
-      .from("organization_members")
-      .select("user_id, organization_id, role");
+      .from("account_members")
+      .select("user_id, account_id, role");
 
-    const memberCountByOrgId = new Map<string, number>();
+    const memberCountByAccountId = new Map<string, number>();
     for (const m of allMembers ?? []) {
-      memberCountByOrgId.set(
-        m.organization_id,
-        (memberCountByOrgId.get(m.organization_id) ?? 0) + 1
+      memberCountByAccountId.set(
+        m.account_id,
+        (memberCountByAccountId.get(m.account_id) ?? 0) + 1
       );
     }
 
-    const membersByUserId = new Map<string, { organization_id: string; role: string }[]>();
+    const membersByUserId = new Map<string, { account_id: string; role: string }[]>();
     for (const m of allMembers ?? []) {
       if (!userIds.includes(m.user_id)) continue;
       const list = membersByUserId.get(m.user_id) ?? [];
-      list.push({ organization_id: m.organization_id, role: m.role });
+      list.push({ account_id: m.account_id, role: m.role });
       membersByUserId.set(m.user_id, list);
     }
 
@@ -113,15 +114,15 @@ export async function listUsersForAdmin(): Promise<{
       else if (!u.email_confirmed_at) status = "pending";
 
       const memberships = membersByUserId.get(u.id) ?? [];
-      const organizations: UserOrgEntry[] = memberships.map((m) => {
-        const org = orgById.get(m.organization_id);
+      const accounts: UserAccountEntry[] = memberships.map((m) => {
+        const account = accountById.get(m.account_id);
         return {
-          orgId: m.organization_id,
-          orgName: org?.name ?? "",
+          accountId: m.account_id,
+          accountName: account?.name ?? "",
           role: m.role,
-          memberCount: memberCountByOrgId.get(m.organization_id) ?? 0,
-          parentOrgName: parentOrgNameByOrgId.get(m.organization_id) ?? null,
-          hasSuborgs: hasSuborgsByOrgId.get(m.organization_id) ?? false,
+          memberCount: memberCountByAccountId.get(m.account_id) ?? 0,
+          parentAccountName: parentAccountNameByAccountId.get(m.account_id) ?? null,
+          hasSubaccounts: hasSubaccountsByAccountId.get(m.account_id) ?? false,
         };
       });
 
@@ -132,7 +133,7 @@ export async function listUsersForAdmin(): Promise<{
         website: profile?.website ?? null,
         status,
         createdAt: u.created_at,
-        organizations,
+        accounts,
       };
     });
 
@@ -143,46 +144,46 @@ export async function listUsersForAdmin(): Promise<{
   }
 }
 
-export async function listOrganizationsForAdmin(): Promise<{
-  organizations: OrganizationListEntry[];
+export async function listAccountsForAdmin(): Promise<{
+  accounts: AccountListEntry[];
   error?: string;
 }> {
   const admin = await getAdminUser();
-  if (!admin) return { organizations: [], error: "Unauthorized" };
+  if (!admin) return { accounts: [], error: "Unauthorized" };
   try {
     const supabase = createServiceRoleClient();
-    const { data: allOrgs } = await supabase
-      .from("organizations")
-      .select("id, name, parent_organization_id")
+    const { data: allAccounts } = await supabase
+      .from("accounts")
+      .select("id, name, parent_account_id")
       .order("name");
 
-    if (!allOrgs?.length) return { organizations: [] };
+    if (!allAccounts?.length) return { accounts: [] };
 
-    const orgById = new Map(
-      allOrgs.map((o) => [
-        o.id,
+    const accountById = new Map(
+      allAccounts.map((a) => [
+        a.id,
         {
-          id: o.id,
-          name: o.name ?? "",
-          parent_organization_id: o.parent_organization_id ?? null,
+          id: a.id,
+          name: a.name ?? "",
+          parent_account_id: a.parent_account_id ?? null,
         },
       ])
     );
 
     const { data: allMembers } = await supabase
-      .from("organization_members")
-      .select("organization_id, user_id");
+      .from("account_members")
+      .select("account_id, user_id");
 
-    const memberCountByOrgId = new Map<string, number>();
-    const userIdsByOrgId = new Map<string, string[]>();
+    const memberCountByAccountId = new Map<string, number>();
+    const userIdsByAccountId = new Map<string, string[]>();
     for (const m of allMembers ?? []) {
-      memberCountByOrgId.set(
-        m.organization_id,
-        (memberCountByOrgId.get(m.organization_id) ?? 0) + 1
+      memberCountByAccountId.set(
+        m.account_id,
+        (memberCountByAccountId.get(m.account_id) ?? 0) + 1
       );
-      const list = userIdsByOrgId.get(m.organization_id) ?? [];
+      const list = userIdsByAccountId.get(m.account_id) ?? [];
       list.push(m.user_id);
-      userIdsByOrgId.set(m.organization_id, list);
+      userIdsByAccountId.set(m.account_id, list);
     }
 
     const allUserIds = [...new Set((allMembers ?? []).map((m) => m.user_id))];
@@ -196,39 +197,40 @@ export async function listOrganizationsForAdmin(): Promise<{
       }
     }
 
-    const parentOrgNameByOrgId = new Map<string, string>();
-    const hasSuborgsByOrgId = new Map<string, boolean>();
-    for (const o of allOrgs) {
-      if (o.parent_organization_id) {
-        const parent = orgById.get(o.parent_organization_id);
-        parentOrgNameByOrgId.set(o.id, parent?.name ?? "");
+    const parentAccountNameByAccountId = new Map<string, string>();
+    const hasSubaccountsByAccountId = new Map<string, boolean>();
+    for (const a of allAccounts) {
+      if (a.parent_account_id) {
+        const parent = accountById.get(a.parent_account_id);
+        parentAccountNameByAccountId.set(a.id, parent?.name ?? "");
       }
-      const children = allOrgs.filter((x) => x.parent_organization_id === o.id);
-      hasSuborgsByOrgId.set(o.id, children.length > 0);
+      const children = allAccounts.filter((x) => x.parent_account_id === a.id);
+      hasSubaccountsByAccountId.set(a.id, children.length > 0);
     }
 
-    const organizations: OrganizationListEntry[] = allOrgs.map((o) => {
-      const memberIds = userIdsByOrgId.get(o.id) ?? [];
+    const accounts: AccountListEntry[] = allAccounts.map((a) => {
+      const memberIds = userIdsByAccountId.get(a.id) ?? [];
       const memberEmails = memberIds
         .map((id) => emailByUserId.get(id))
         .filter((e): e is string => Boolean(e));
       return {
-        id: o.id,
-        name: o.name ?? "",
-        parentOrgName: parentOrgNameByOrgId.get(o.id) ?? null,
-        memberCount: memberCountByOrgId.get(o.id) ?? 0,
-        hasSuborgs: hasSuborgsByOrgId.get(o.id) ?? false,
+        id: a.id,
+        name: a.name ?? "",
+        parent_account_id: a.parent_account_id ?? null,
+        parentAccountName: parentAccountNameByAccountId.get(a.id) ?? null,
+        memberCount: memberCountByAccountId.get(a.id) ?? 0,
+        hasSubaccounts: hasSubaccountsByAccountId.get(a.id) ?? false,
         memberEmails,
       };
     });
 
-    organizations.sort((a, b) => b.memberCount - a.memberCount);
+    accounts.sort((a, b) => b.memberCount - a.memberCount);
 
-    return { organizations };
+    return { accounts };
   } catch (err) {
     const msg =
-      err instanceof Error ? err.message : "Failed to list organizations";
-    return { organizations: [], error: msg };
+      err instanceof Error ? err.message : "Failed to list accounts";
+    return { accounts: [], error: msg };
   }
 }
 

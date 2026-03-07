@@ -13,29 +13,29 @@ export type {
   BillingModel,
 } from "./schema/billing_accounts.js";
 export {
-  createOrganizationBillingTableSql,
-  enableRlsOrganizationBillingSql,
-  ORGANIZATION_BILLING_TABLE,
-} from "./schema/organization_billing.js";
+  createAccountBillingTableSql,
+  enableRlsAccountBillingSql,
+  ACCOUNT_BILLING_TABLE,
+} from "./schema/account_billing.js";
 export type {
-  OrganizationBillingRow,
+  AccountBillingRow,
   BillingMode,
-} from "./schema/organization_billing.js";
+} from "./schema/account_billing.js";
 export {
-  createOrganizationsTableSql,
-  enableRlsOrganizationsSql,
-  ORGANIZATIONS_TABLE,
-} from "./schema/organizations.js";
-export type { OrganizationRow } from "./schema/organizations.js";
+  createAccountsTableSql,
+  enableRlsAccountsSql,
+  ACCOUNTS_TABLE,
+} from "./schema/accounts.js";
+export type { AccountRow } from "./schema/accounts.js";
 export {
-  createOrganizationMembersTableSql,
-  enableRlsOrganizationMembersSql,
-  ORGANIZATION_MEMBERS_TABLE,
-} from "./schema/organization_members.js";
+  createAccountMembersTableSql,
+  enableRlsAccountMembersSql,
+  ACCOUNT_MEMBERS_TABLE,
+} from "./schema/account_members.js";
 export type {
-  OrganizationMemberRow,
+  AccountMemberRow,
   MemberRole,
-} from "./schema/organization_members.js";
+} from "./schema/account_members.js";
 export {
   createProfilesTableSql,
   enableRlsProfilesSql,

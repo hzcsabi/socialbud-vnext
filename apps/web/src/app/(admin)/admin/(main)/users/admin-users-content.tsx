@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DeleteUserButton } from "./delete-user-button";
-import type { UserListEntry, OrganizationListEntry } from "./actions";
+import type { UserListEntry, AccountListEntry } from "./actions";
 
 const PAGE_SIZE = 50;
 
@@ -47,33 +47,43 @@ function matchesSearch(text: string | null, query: string): boolean {
   return text.toLowerCase().includes(query.toLowerCase());
 }
 
-type MainTab = "users" | "orgs";
-type OrgTab = "individual" | "parent";
+type MainTab = "users" | "accounts";
+type AccountTab = "individual" | "parent";
 
 type Props = {
   users: UserListEntry[];
-  organizations: OrganizationListEntry[];
+  accounts: AccountListEntry[];
   currentUserId: string | null;
   error?: string;
-  orgsError?: string;
+  accountsError?: string;
 };
 
 export function AdminUsersContent({
   users,
-  organizations,
+  accounts,
   currentUserId,
   error,
-  orgsError,
+  accountsError,
 }: Props) {
   const [search, setSearch] = useState("");
   const [mainTab, setMainTab] = useState<MainTab>("users");
-  const [orgTab, setOrgTab] = useState<OrgTab>("individual");
+  const [accountTab, setAccountTab] = useState<AccountTab>("individual");
   const [userPage, setUserPage] = useState(1);
-  const [orgPage, setOrgPage] = useState(1);
+  const [accountPage, setAccountPage] = useState(1);
+  const [expandedParentIds, setExpandedParentIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    setOrgPage(1);
-  }, [orgTab]);
+    setAccountPage(1);
+  }, [accountTab]);
+
+  const toggleParentExpanded = (parentId: string) => {
+    setExpandedParentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(parentId)) next.delete(parentId);
+      else next.add(parentId);
+      return next;
+    });
+  };
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -81,43 +91,58 @@ export function AdminUsersContent({
     return users.filter((u) => {
       if (matchesSearch(u.name, q) || matchesSearch(u.email, q) || matchesSearch(u.website, q))
         return true;
-      if (u.organizations.some((o) => matchesSearch(o.orgName, q) || matchesSearch(o.parentOrgName, q)))
+      if (u.accounts.some((a) => matchesSearch(a.accountName, q) || matchesSearch(a.parentAccountName, q)))
         return true;
       return false;
     });
   }, [users, search]);
 
-  const individualOrgs = useMemo(
-    () => organizations.filter((o) => !o.hasSuborgs),
-    [organizations]
+  const individualAccounts = useMemo(
+    () => accounts.filter((a) => !a.hasSubaccounts),
+    [accounts]
   );
-  const parentOrgs = useMemo(
-    () => organizations.filter((o) => o.hasSuborgs),
-    [organizations]
+  const parentAccounts = useMemo(
+    () => accounts.filter((a) => a.hasSubaccounts),
+    [accounts]
   );
 
-  const filterOrgs = (list: OrganizationListEntry[]) => {
+  const filterAccounts = (list: AccountListEntry[]) => {
     const q = search.trim().toLowerCase();
     if (!q) return list;
     return list.filter(
-      (o) =>
-        matchesSearch(o.name, q) ||
-        matchesSearch(o.parentOrgName, q) ||
-        o.memberEmails.some((e) => matchesSearch(e, q))
+      (a) =>
+        matchesSearch(a.name, q) ||
+        matchesSearch(a.parentAccountName, q) ||
+        a.memberEmails.some((e) => matchesSearch(e, q))
     );
   };
 
-  const filteredIndividualOrgs = useMemo(
-    () => filterOrgs(individualOrgs),
-    [individualOrgs, search]
+  const filteredIndividualAccounts = useMemo(
+    () => filterAccounts(individualAccounts),
+    [individualAccounts, search]
   );
-  const filteredParentOrgs = useMemo(
-    () => filterOrgs(parentOrgs),
-    [parentOrgs, search]
+  const filteredParentAccounts = useMemo(
+    () => filterAccounts(parentAccounts),
+    [parentAccounts, search]
   );
 
-  const currentOrgs =
-    orgTab === "individual" ? filteredIndividualOrgs : filteredParentOrgs;
+  const subaccountsByParentId = useMemo(() => {
+    const map = new Map<string, AccountListEntry[]>();
+    const q = search.trim().toLowerCase();
+    for (const a of accounts) {
+      const parentId = a.parent_account_id;
+      if (!parentId) continue;
+      if (q && !matchesSearch(a.name, q) && !matchesSearch(a.parentAccountName, q) && !a.memberEmails.some((e) => matchesSearch(e, q)))
+        continue;
+      const list = map.get(parentId) ?? [];
+      list.push(a);
+      map.set(parentId, list);
+    }
+    return map;
+  }, [accounts, search]);
+
+  const currentAccounts =
+    accountTab === "individual" ? filteredIndividualAccounts : filteredParentAccounts;
 
   const totalUserPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
   const effectiveUserPage = Math.min(Math.max(1, userPage), totalUserPages);
@@ -126,11 +151,11 @@ export function AdminUsersContent({
     effectiveUserPage * PAGE_SIZE
   );
 
-  const totalOrgPages = Math.max(1, Math.ceil(currentOrgs.length / PAGE_SIZE));
-  const effectiveOrgPage = Math.min(Math.max(1, orgPage), totalOrgPages);
-  const paginatedOrgs = currentOrgs.slice(
-    (effectiveOrgPage - 1) * PAGE_SIZE,
-    effectiveOrgPage * PAGE_SIZE
+  const totalAccountPages = Math.max(1, Math.ceil(currentAccounts.length / PAGE_SIZE));
+  const effectiveAccountPage = Math.min(Math.max(1, accountPage), totalAccountPages);
+  const paginatedAccounts = currentAccounts.slice(
+    (effectiveAccountPage - 1) * PAGE_SIZE,
+    effectiveAccountPage * PAGE_SIZE
   );
 
   return (
@@ -158,28 +183,28 @@ export function AdminUsersContent({
         <button
           type="button"
           role="tab"
-          aria-selected={mainTab === "orgs"}
-          onClick={() => setMainTab("orgs")}
+          aria-selected={mainTab === "accounts"}
+          onClick={() => setMainTab("accounts")}
           className={cn(
             "rounded-t-md border border-b-0 border-border px-4 py-2 text-sm font-medium transition-colors",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-            mainTab === "orgs"
+            mainTab === "accounts"
               ? "border-border bg-background text-foreground -mb-px"
               : "border-transparent bg-transparent text-muted-foreground hover:text-foreground"
           )}
         >
-          Orgs ({filteredIndividualOrgs.length + filteredParentOrgs.length})
+          Accounts ({filteredIndividualAccounts.length + filteredParentAccounts.length})
         </button>
       </div>
 
       <div className="mt-4 w-full">
         <Input
           type="search"
-          placeholder="Filter users and orgs by name, email, website…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full"
-          aria-label="Filter users and orgs"
+            placeholder="Filter users and accounts by name, email, website…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full"
+            aria-label="Filter users and accounts"
         />
       </div>
 
@@ -188,7 +213,7 @@ export function AdminUsersContent({
         <CardHeader>
           <CardTitle>All users</CardTitle>
           <CardDescription>
-            Name, email, organizations (with role and member count), website, and status (Active = confirmed email; Pending = not yet confirmed; Banned = access revoked).
+            Name, email, accounts (with role and member count), website, and status (Active = confirmed email; Pending = not yet confirmed; Banned = access revoked).
           </CardDescription>
           {error ? (
             <p className="text-sm text-destructive">
@@ -210,7 +235,7 @@ export function AdminUsersContent({
                     <tr className="border-b border-border bg-muted/50">
                       <th className="px-4 py-3 text-left font-medium">Name</th>
                       <th className="px-4 py-3 text-left font-medium">Email</th>
-                      <th className="px-4 py-3 text-left font-medium">Organizations</th>
+                      <th className="px-4 py-3 text-left font-medium">Accounts</th>
                       <th className="px-4 py-3 text-left font-medium">Website</th>
                       <th className="px-4 py-3 text-left font-medium">Status</th>
                       <th className="px-4 py-3 text-right font-medium">Actions</th>
@@ -222,38 +247,38 @@ export function AdminUsersContent({
                         <td className="px-4 py-3">{u.name ?? "—"}</td>
                         <td className="px-4 py-3">{u.email ?? "—"}</td>
                         <td className="px-4 py-3 align-top">
-                          {u.organizations.length === 0 ? (
+                          {u.accounts.length === 0 ? (
                             "—"
                           ) : (
                             <ul className="space-y-1.5">
-                              {u.organizations.map((org) => (
-                                <li key={org.orgId} className="text-xs">
+                              {u.accounts.map((account) => (
+                                <li key={account.accountId} className="text-xs">
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      setMainTab("orgs");
-                                      setOrgTab(org.hasSuborgs ? "parent" : "individual");
-                                      setSearch(org.orgName);
-                                      setOrgPage(1);
+                                      setMainTab("accounts");
+                                      setAccountTab(account.hasSubaccounts ? "parent" : "individual");
+                                      setSearch(account.accountName);
+                                      setAccountPage(1);
                                     }}
                                     className="font-medium text-primary underline-offset-4 hover:underline"
                                   >
-                                    {org.orgName}
+                                    {account.accountName}
                                   </button>
                                   <span className="ml-1 rounded bg-muted px-1.5 py-0.5 capitalize">
-                                    {org.role}
+                                    {account.role}
                                   </span>
                                   <span className="ml-1 text-muted-foreground">
-                                    ({org.memberCount} member{org.memberCount !== 1 ? "s" : ""})
+                                    ({account.memberCount} member{account.memberCount !== 1 ? "s" : ""})
                                   </span>
-                                  {org.parentOrgName ? (
+                                  {account.parentAccountName ? (
                                     <span className="ml-1 text-muted-foreground">
-                                      ↑ Parent: {org.parentOrgName}
+                                      ↑ Parent: {account.parentAccountName}
                                     </span>
                                   ) : null}
-                                  {org.hasSuborgs ? (
+                                  {account.hasSubaccounts ? (
                                     <span className="ml-1 text-muted-foreground">
-                                      ↓ suborgs
+                                      ↓ sub-accounts
                                     </span>
                                   ) : null}
                                 </li>
@@ -313,64 +338,64 @@ export function AdminUsersContent({
       </Card>
       )}
 
-      {mainTab === "orgs" && (
+      {mainTab === "accounts" && (
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Organizations</CardTitle>
+          <CardTitle>Accounts</CardTitle>
           <CardDescription>
-            All organizations with parent, member count, suborgs, and member emails. Sorted by member count (desc). Useful for debugging and cleanup.
+            All accounts with parent, member count, sub-accounts, and member emails. Sorted by member count (desc). Useful for debugging and cleanup.
           </CardDescription>
-          {orgsError ? (
-            <p className="text-sm text-destructive">{orgsError}</p>
+          {accountsError ? (
+            <p className="text-sm text-destructive">{accountsError}</p>
           ) : null}
         </CardHeader>
-        {!orgsError && (
+        {!accountsError && (
           <CardContent>
             <div
               className="mb-4 flex gap-0 border-b border-border"
               role="tablist"
-              aria-label="Organization type"
+              aria-label="Account type"
             >
               <button
                 type="button"
                 role="tab"
-                aria-selected={orgTab === "individual"}
-                onClick={() => setOrgTab("individual")}
+                aria-selected={accountTab === "individual"}
+                onClick={() => setAccountTab("individual")}
                 className={cn(
                   "rounded-t-md border border-b-0 border-border px-4 py-2 text-sm font-medium transition-colors",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                  orgTab === "individual"
+                  accountTab === "individual"
                     ? "border-border bg-background text-foreground -mb-px"
                     : "border-transparent bg-transparent text-muted-foreground hover:text-foreground"
                 )}
               >
-                Individual ({filteredIndividualOrgs.length})
+                Individual accounts ({filteredIndividualAccounts.length})
               </button>
               <button
                 type="button"
                 role="tab"
-                aria-selected={orgTab === "parent"}
-                onClick={() => setOrgTab("parent")}
+                aria-selected={accountTab === "parent"}
+                onClick={() => setAccountTab("parent")}
                 className={cn(
                   "rounded-t-md border border-b-0 border-border px-4 py-2 text-sm font-medium transition-colors",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                  orgTab === "parent"
+                  accountTab === "parent"
                     ? "border-border bg-background text-foreground -mb-px"
                     : "border-transparent bg-transparent text-muted-foreground hover:text-foreground"
                 )}
               >
-                Parent orgs ({filteredParentOrgs.length})
+                Parent accounts ({filteredParentAccounts.length})
               </button>
             </div>
-            {currentOrgs.length === 0 ? (
+            {currentAccounts.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                {orgTab === "individual"
-                  ? individualOrgs.length === 0
-                    ? "No individual organizations yet."
-                    : "No individual organizations match the search."
-                  : parentOrgs.length === 0
-                    ? "No parent organizations yet."
-                    : "No parent organizations match the search."}
+                {accountTab === "individual"
+                  ? individualAccounts.length === 0
+                    ? "No individual accounts yet."
+                    : "No individual accounts match the search."
+                  : parentAccounts.length === 0
+                    ? "No parent accounts yet."
+                    : "No parent accounts match the search."}
               </p>
             ) : (
               <>
@@ -378,56 +403,99 @@ export function AdminUsersContent({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-muted/50">
+                      <th className="w-8 px-2 py-3" aria-label="Expand" />
                       <th className="px-4 py-3 text-left font-medium">Name</th>
                       <th className="px-4 py-3 text-left font-medium">Parent</th>
                       <th className="px-4 py-3 text-left font-medium">Members</th>
-                      <th className="px-4 py-3 text-left font-medium">Has suborgs</th>
+                      <th className="px-4 py-3 text-left font-medium">Has sub-accounts</th>
                       <th className="px-4 py-3 text-left font-medium">Member emails</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedOrgs.map((o) => (
-                      <tr key={o.id} className="border-b border-border last:border-0">
-                        <td className="px-4 py-3 font-medium">{o.name}</td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {o.parentOrgName ?? "—"}
-                        </td>
-                        <td className="px-4 py-3">{o.memberCount}</td>
-                        <td className="px-4 py-3">
-                          {o.hasSuborgs ? "Yes" : "—"}
-                        </td>
-                        <td
-                          className="max-w-xs truncate px-4 py-3 text-muted-foreground"
-                          title={o.memberEmails.join(", ")}
-                        >
-                          {o.memberEmails.length === 0
-                            ? "—"
-                            : o.memberEmails.join(", ")}
-                        </td>
-                      </tr>
-                    ))}
+                    {paginatedAccounts.map((a) => {
+                      const subaccounts = accountTab === "parent" ? (subaccountsByParentId.get(a.id) ?? []) : [];
+                      const isExpanded = expandedParentIds.has(a.id);
+                      return (
+                        <React.Fragment key={a.id}>
+                          <tr className="border-b border-border last:border-0">
+                            <td className="w-8 px-2 py-3">
+                              {accountTab === "parent" && a.hasSubaccounts ? (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleParentExpanded(a.id)}
+                                  aria-expanded={isExpanded}
+                                  aria-label={isExpanded ? "Collapse sub-accounts" : "Expand sub-accounts"}
+                                  className="flex size-6 items-center justify-center rounded hover:bg-muted"
+                                >
+                                  <span className="text-muted-foreground" aria-hidden>
+                                    {isExpanded ? "▼" : "▶"}
+                                  </span>
+                                </button>
+                              ) : null}
+                            </td>
+                            <td className="px-4 py-3 font-medium">{a.name}</td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {a.parentAccountName ?? "—"}
+                            </td>
+                            <td className="px-4 py-3">{a.memberCount}</td>
+                            <td className="px-4 py-3">
+                              {a.hasSubaccounts ? "Yes" : "—"}
+                            </td>
+                            <td
+                              className="max-w-xs truncate px-4 py-3 text-muted-foreground"
+                              title={a.memberEmails.join(", ")}
+                            >
+                              {a.memberEmails.length === 0
+                                ? "—"
+                                : a.memberEmails.join(", ")}
+                            </td>
+                          </tr>
+                          {accountTab === "parent" && isExpanded && subaccounts.map((sub) => (
+                            <tr key={sub.id} className="border-b border-border bg-muted/30 last:border-0">
+                              <td className="w-8 px-2 py-3" />
+                              <td className="px-4 py-3 pl-10 font-medium text-muted-foreground">
+                                ↳ {sub.name}
+                              </td>
+                              <td className="px-4 py-3 text-muted-foreground">
+                                {sub.parentAccountName ?? "—"}
+                              </td>
+                              <td className="px-4 py-3">{sub.memberCount}</td>
+                              <td className="px-4 py-3">—</td>
+                              <td
+                                className="max-w-xs truncate px-4 py-3 text-muted-foreground"
+                                title={sub.memberEmails.join(", ")}
+                              >
+                                {sub.memberEmails.length === 0
+                                  ? "—"
+                                  : sub.memberEmails.join(", ")}
+                              </td>
+                            </tr>
+                          ))}
+                        </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
-              {totalOrgPages > 1 && (
+              {totalAccountPages > 1 && (
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm text-muted-foreground">
-                    Page {effectiveOrgPage} of {totalOrgPages} ({currentOrgs.length} orgs)
+                    Page {effectiveAccountPage} of {totalAccountPages} ({currentAccounts.length} accounts)
                   </p>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setOrgPage((p) => Math.max(1, p - 1))}
-                      disabled={effectiveOrgPage <= 1}
+                      onClick={() => setAccountPage((p) => Math.max(1, p - 1))}
+                      disabled={effectiveAccountPage <= 1}
                     >
                       Previous
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setOrgPage((p) => Math.min(totalOrgPages, p + 1))}
-                      disabled={effectiveOrgPage >= totalOrgPages}
+                      onClick={() => setAccountPage((p) => Math.min(totalAccountPages, p + 1))}
+                      disabled={effectiveAccountPage >= totalAccountPages}
                     >
                       Next
                     </Button>

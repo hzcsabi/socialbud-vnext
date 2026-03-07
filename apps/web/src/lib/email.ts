@@ -39,21 +39,21 @@ export async function sendEmail(params: {
 export async function sendInvitationEmail(params: {
   to: string;
   inviterDisplayName: string;
-  organizationName: string;
+  accountName: string;
   acceptLink: string;
 }): Promise<{ sent: boolean; error?: string }> {
-  const { to, inviterDisplayName, organizationName, acceptLink } = params;
-  const subject = `You're invited to join ${organizationName} on Socialbud`;
+  const { to, inviterDisplayName, accountName, acceptLink } = params;
+  const subject = `You're invited to join ${accountName} on Socialbud`;
   const html = `
     <p>Hello,</p>
-    <p><strong>${escapeHtml(inviterDisplayName || "A teammate")}</strong> has invited you to join the workspace <strong>${escapeHtml(organizationName)}</strong> on Socialbud.</p>
+    <p><strong>${escapeHtml(inviterDisplayName || "A teammate")}</strong> has invited you to join the workspace <strong>${escapeHtml(accountName)}</strong> on Socialbud.</p>
     <p><a href="${escapeHtml(acceptLink)}" style="display: inline-block; padding: 10px 20px; background: #000; color: #fff; text-decoration: none; border-radius: 6px;">Accept invitation</a></p>
     <p>Or copy this link: ${escapeHtml(acceptLink)}</p>
     <p>— The Socialbud team</p>
   `;
   const text = [
     "Hello,",
-    `${inviterDisplayName || "A teammate"} has invited you to join the workspace ${organizationName} on Socialbud.`,
+    `${inviterDisplayName || "A teammate"} has invited you to join the workspace ${accountName} on Socialbud.`,
     `Accept invitation: ${acceptLink}`,
     "— The Socialbud team",
   ].join("\n");

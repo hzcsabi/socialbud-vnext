@@ -31,7 +31,7 @@ export async function submitOnboarding(formData: FormData) {
   }
 
   const { data: existingMember } = await supabase
-    .from("organization_members")
+    .from("account_members")
     .select("id")
     .eq("user_id", user.id)
     .limit(1)
@@ -39,23 +39,23 @@ export async function submitOnboarding(formData: FormData) {
 
   if (!existingMember) {
     const adminSupabase = createServiceRoleClient();
-    const orgName =
+    const accountName =
       displayName || companyName || "My workspace";
 
-    const { data: org, error: orgError } = await adminSupabase
-      .from("organizations")
-      .insert({ name: orgName, slug: null })
+    const { data: account, error: accountError } = await adminSupabase
+      .from("accounts")
+      .insert({ name: accountName, slug: null })
       .select("id")
       .single();
 
-    if (orgError) {
-      return { error: orgError.message };
+    if (accountError) {
+      return { error: accountError.message };
     }
 
     const { error: memberError } = await adminSupabase
-      .from("organization_members")
+      .from("account_members")
       .insert({
-        organization_id: org.id,
+        account_id: account.id,
         user_id: user.id,
         role: "owner",
       });

@@ -1,11 +1,11 @@
 import { getAdminUser } from "@/lib/admin";
-import { listUsersForAdmin, listOrganizationsForAdmin } from "./actions";
+import { listUsersForAdmin, listAccountsForAdmin } from "./actions";
 import { AdminUsersContent } from "./admin-users-content";
 
 export default async function AdminUsersPage() {
   const admin = await getAdminUser();
-  const [{ users, error }, { organizations: orgs, error: orgsError }] =
-    await Promise.all([listUsersForAdmin(), listOrganizationsForAdmin()]);
+  const [{ users, error }, { accounts, error: accountsError }] =
+    await Promise.all([listUsersForAdmin(), listAccountsForAdmin()]);
   const currentUserId = admin?.user.id ?? null;
 
   return (
@@ -16,10 +16,10 @@ export default async function AdminUsersPage() {
       </p>
       <AdminUsersContent
         users={users}
-        organizations={orgs}
+        accounts={accounts}
         currentUserId={currentUserId}
         error={error}
-        orgsError={orgsError}
+        accountsError={accountsError}
       />
     </div>
   );

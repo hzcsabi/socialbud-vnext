@@ -5,6 +5,7 @@
     "build": "pnpm -r run build",
     "dev": "pnpm -r run dev",
     "dev:web": "pnpm --filter @socialbud/web run dev",
+    "dev:web:3001": "pnpm --filter @socialbud/web run dev:port",
     "dev:brain": "pnpm --filter @socialbud/brain run dev",
     "db:migrate": "pnpm --filter @socialbud/brain run migrate",
     "lint": "pnpm -r run lint"

@@ -6,15 +6,15 @@ import { createServiceRoleClient } from "@/lib/supabase/server-admin";
 export async function getInvitationByToken(token: string): Promise<{
   valid: boolean;
   email?: string;
-  organizationName?: string;
+  accountName?: string;
 }> {
   if (!token?.trim()) return { valid: false };
 
   try {
     const supabase = createServiceRoleClient();
     const { data: row, error } = await supabase
-      .from("organization_invitations")
-      .select("email, status, expires_at, organization_id")
+      .from("account_invitations")
+      .select("email, status, expires_at, account_id")
       .eq("token", token.trim())
       .single();
 
@@ -22,16 +22,16 @@ export async function getInvitationByToken(token: string): Promise<{
     if (row.status !== "pending") return { valid: false };
     if (new Date(row.expires_at) <= new Date()) return { valid: false };
 
-    const { data: org } = await supabase
-      .from("organizations")
+    const { data: account } = await supabase
+      .from("accounts")
       .select("name")
-      .eq("id", row.organization_id)
+      .eq("id", row.account_id)
       .single();
 
     return {
       valid: true,
       email: row.email,
-      organizationName: org?.name ?? "the workspace",
+      accountName: account?.name ?? "the workspace",
     };
   } catch {
     return { valid: false };
@@ -51,8 +51,8 @@ export async function acceptInvitation(token: string): Promise<{ error?: string 
   try {
     const adminSupabase = createServiceRoleClient();
     const { data: row, error: fetchError } = await adminSupabase
-      .from("organization_invitations")
-      .select("id, organization_id, email, status, expires_at")
+      .from("account_invitations")
+      .select("id, account_id, email, status, expires_at")
       .eq("token", trimmed)
       .single();
 
@@ -66,8 +66,8 @@ export async function acceptInvitation(token: string): Promise<{ error?: string 
       return { error: "This invitation was sent to a different email address" };
     }
 
-    const { error: insertError } = await adminSupabase.from("organization_members").insert({
-      organization_id: row.organization_id,
+    const { error: insertError } = await adminSupabase.from("account_members").insert({
+      account_id: row.account_id,
       user_id: user.id,
       role: "member",
     });
@@ -75,7 +75,7 @@ export async function acceptInvitation(token: string): Promise<{ error?: string 
     if (insertError) {
       if (insertError.code === "23505") {
         await adminSupabase
-          .from("organization_invitations")
+          .from("account_invitations")
           .update({ status: "accepted" })
           .eq("id", row.id);
         return {};
@@ -84,7 +84,7 @@ export async function acceptInvitation(token: string): Promise<{ error?: string 
     }
 
     const { error: updateError } = await adminSupabase
-      .from("organization_invitations")
+      .from("account_invitations")
       .update({ status: "accepted" })
       .eq("id", row.id);
 

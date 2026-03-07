@@ -90,7 +90,7 @@ export default async function InviteAcceptPage({ searchParams }: Props) {
       <div className="text-center space-y-4 max-w-sm">
         <h1 className="text-xl font-semibold">You&apos;re invited</h1>
         <p className="text-muted-foreground">
-          You&apos;re invited to join <strong>{invitation.organizationName}</strong>. Sign up or log in with <strong>{invitation.email}</strong> to accept.
+          You&apos;re invited to join <strong>{invitation.accountName}</strong>. Sign up or log in with <strong>{invitation.email}</strong> to accept.
         </p>
         <div className="flex flex-wrap justify-center gap-2">
           <Button asChild>

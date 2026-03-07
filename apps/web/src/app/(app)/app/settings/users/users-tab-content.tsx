@@ -20,13 +20,13 @@ import {
 } from "./actions";
 
 type Props = {
-  organization: { id: string; name: string };
+  account: { id: string; name: string };
   members: MemberRow[];
   pendingInvitations: PendingInvitationRow[];
 };
 
 export function UsersTabContent({
-  organization,
+  account,
   members,
   pendingInvitations,
 }: Props) {
@@ -41,7 +41,7 @@ export function UsersTabContent({
     e.preventDefault();
     setInviteError(null);
     setInviteLoading(true);
-    const result = await createInvitation(organization.id, email);
+    const result = await createInvitation(account.id, email);
     setInviteLoading(false);
     if (result.error) {
       setInviteError(result.error);
@@ -53,14 +53,14 @@ export function UsersTabContent({
 
   async function handleRevoke(invitationId: string) {
     setRevokingId(invitationId);
-    await revokeInvitation(invitationId, organization.id);
+    await revokeInvitation(invitationId, account.id);
     setRevokingId(null);
     router.refresh();
   }
 
   async function handleResend(invitationId: string) {
     setResendingId(invitationId);
-    await resendInvitation(invitationId, organization.id);
+    await resendInvitation(invitationId, account.id);
     setResendingId(null);
     router.refresh();
   }
@@ -71,7 +71,7 @@ export function UsersTabContent({
         <CardHeader>
           <CardTitle>Invite by email</CardTitle>
           <CardDescription>
-            Send an invitation to join {organization.name}. They will receive an email with a link to sign up or log in.
+            Send an invitation to join {account.name}. They will receive an email with a link to sign up or log in.
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { getCurrentUserOrganization } from "@/lib/organization";
+import { getCurrentUserAccount } from "@/lib/account";
 import { listMembers, listPendingInvitations } from "./users/actions";
 import { SettingsTabs } from "./settings-tabs";
 
@@ -23,19 +23,19 @@ export default async function SettingsPage() {
     website: profile?.website ?? null,
   };
 
-  let organization: Awaited<ReturnType<typeof getCurrentUserOrganization>> = null;
+  let account: Awaited<ReturnType<typeof getCurrentUserAccount>> = null;
   let members: Awaited<ReturnType<typeof listMembers>>["members"] = [];
   let pendingInvitations: Awaited<ReturnType<typeof listPendingInvitations>>["invitations"] = [];
   try {
-    organization = await getCurrentUserOrganization();
-    if (organization) {
-      const membersResult = await listMembers(organization.id);
-      const invitationsResult = await listPendingInvitations(organization.id);
+    account = await getCurrentUserAccount();
+    if (account) {
+      const membersResult = await listMembers(account.id);
+      const invitationsResult = await listPendingInvitations(account.id);
       members = membersResult.members ?? [];
       pendingInvitations = invitationsResult.invitations ?? [];
     }
   } catch {
-    organization = null;
+    account = null;
     members = [];
     pendingInvitations = [];
   }
@@ -43,7 +43,7 @@ export default async function SettingsPage() {
   return (
     <SettingsTabs
       profile={profileData}
-      organization={organization}
+      account={account}
       members={members}
       pendingInvitations={pendingInvitations}
     />

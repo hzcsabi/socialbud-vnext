@@ -30,16 +30,15 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_billing_account_id
 export const enableRlsSubscriptionsSql = `
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can select subscriptions for orgs they belong to"
+CREATE POLICY "Users can select subscriptions for accounts they belong to"
   ON subscriptions FOR SELECT
   USING (
     EXISTS (
       SELECT 1
-      FROM organization_billing ob
-      JOIN organization_members om
-        ON om.organization_id = ob.organization_id
-      WHERE ob.billing_account_id = subscriptions.billing_account_id
-        AND om.user_id = auth.uid()
+      FROM account_billing ab
+      JOIN account_members am ON am.account_id = ab.account_id
+      WHERE ab.billing_account_id = subscriptions.billing_account_id
+        AND am.user_id = auth.uid()
     )
   );
 `;
