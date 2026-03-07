@@ -6,7 +6,8 @@ import { createServiceRoleClient } from "@/lib/supabase/server-admin";
 /**
  * Ensures the current user has at least one organization and membership (creates
  * org + owner membership if missing). No-op if they already have a membership.
- * Use when getCurrentUserOrganization() returned null but the user is known to be authenticated.
+ * Uses service-role as source of truth so we never create a duplicate when the
+ * user's session would miss an existing membership.
  * @throws if ensure fails (e.g. missing service role env or DB error)
  */
 export async function ensureCurrentUserOrganization(): Promise<void> {
@@ -24,6 +25,15 @@ export async function ensureCurrentUserOrganization(): Promise<void> {
     .maybeSingle();
   if (existingMember) return;
 
+  const adminSupabase = createServiceRoleClient();
+  const { data: existingViaAdmin } = await adminSupabase
+    .from("organization_members")
+    .select("id")
+    .eq("user_id", user.id)
+    .limit(1)
+    .maybeSingle();
+  if (existingViaAdmin) return;
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("display_name, company_name")
@@ -33,7 +43,6 @@ export async function ensureCurrentUserOrganization(): Promise<void> {
   const companyName = (profile?.company_name as string)?.trim() ?? null;
   const orgName = displayName || companyName || "My workspace";
 
-  const adminSupabase = createServiceRoleClient();
   const { data: org, error: orgError } = await adminSupabase
     .from("organizations")
     .insert({ name: orgName, slug: null })
@@ -77,7 +86,24 @@ export async function getCurrentUserOrganization(): Promise<{
       .then((r) => r.data);
 
     if (!member) {
-      // Create org + membership using same auth user (no second createClient).
+      const adminSupabase = createServiceRoleClient();
+      const { data: existingViaAdmin } = await adminSupabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (existingViaAdmin) {
+        const { data: org } = await adminSupabase
+          .from("organizations")
+          .select("id, name")
+          .eq("id", existingViaAdmin.organization_id)
+          .single();
+        if (org) return { id: org.id, name: org.name };
+        return null;
+      }
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("display_name, company_name")
@@ -88,7 +114,6 @@ export async function getCurrentUserOrganization(): Promise<{
       const orgName = displayName || companyName || "My workspace";
 
       try {
-        const adminSupabase = createServiceRoleClient();
         const { data: org, error: orgError } = await adminSupabase
           .from("organizations")
           .insert({ name: orgName, slug: null })
