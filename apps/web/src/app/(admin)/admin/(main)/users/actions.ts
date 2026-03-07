@@ -748,7 +748,8 @@ export async function unsuspendUserAsAdmin(userId: string): Promise<{ error?: st
 
 /**
  * Soft-delete a user (admin only). Sets profiles.deleted_at and auth banned_until so they disappear from
- * the admin UI and cannot sign in. Data is preserved for analytics. Optionally sends a notification email.
+ * the admin UI and cannot sign in. Also soft-deletes any accounts where the user was the sole member.
+ * Data is preserved for analytics. Optionally sends a notification email.
  */
 export async function deleteUserAsAdmin(
   userId: string,
@@ -795,6 +796,35 @@ export async function deleteUserAsAdmin(
         if (msg?.includes("deleted_at") || msg?.includes("column"))
           return { error: `${msg} Run the migration to add deleted_at.` };
         return { error: msg };
+      }
+    }
+
+    const { data: userMemberships } = await supabase
+      .from("account_members")
+      .select("account_id")
+      .eq("user_id", userId);
+    const accountIds = [...new Set((userMemberships ?? []).map((m) => m.account_id))];
+    if (accountIds.length > 0) {
+      const { data: allMembersInAccounts } = await supabase
+        .from("account_members")
+        .select("account_id")
+        .in("account_id", accountIds);
+      const memberCountByAccountId = new Map<string, number>();
+      for (const m of allMembersInAccounts ?? []) {
+        memberCountByAccountId.set(
+          m.account_id,
+          (memberCountByAccountId.get(m.account_id) ?? 0) + 1
+        );
+      }
+      const soleMemberAccountIds = accountIds.filter(
+        (id) => (memberCountByAccountId.get(id) ?? 0) === 1
+      );
+      if (soleMemberAccountIds.length > 0) {
+        const { error: accountsError } = await supabase
+          .from("accounts")
+          .update({ deleted_at: now, updated_at: now })
+          .in("id", soleMemberAccountIds);
+        if (accountsError) return { error: accountsError.message };
       }
     }
 
