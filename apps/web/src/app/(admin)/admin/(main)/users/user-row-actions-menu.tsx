@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoveMemberButton } from "./move-member-button";
+import { ManageUserAccountsModal } from "./manage-user-accounts-modal";
 import { DeleteUserButton } from "./delete-user-button";
 import { suspendUserAsAdmin, setAccountMemberRoleAsAdmin } from "./actions";
 import type { AccountListEntry, MemberRole } from "./actions";
@@ -29,7 +29,7 @@ function roleLabel(role: MemberRole) {
     case "admin":
       return "Admin";
     case "member":
-      return "User";
+      return "Member";
     default:
       return role;
   }
@@ -43,6 +43,8 @@ type Props = {
   fromAccountName?: string;
   memberRole?: MemberRole;
   accounts?: AccountListEntry[];
+  /** User's current account IDs (for Manage accounts modal). Pass from Users tab or derived from users in Accounts tab. */
+  currentAccountIds?: string[];
 };
 
 export function UserRowActionsMenu({
@@ -53,11 +55,12 @@ export function UserRowActionsMenu({
   fromAccountName,
   memberRole,
   accounts = [],
+  currentAccountIds = [],
 }: Props) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
-  const [moveOpen, setMoveOpen] = useState(false);
+  const [manageAccountsOpen, setManageAccountsOpen] = useState(false);
   const [changeRoleOpen, setChangeRoleOpen] = useState(false);
   const [changeRoleLoading, setChangeRoleLoading] = useState(false);
   const [changeRoleError, setChangeRoleError] = useState<string | null>(null);
@@ -113,7 +116,7 @@ export function UserRowActionsMenu({
     router.refresh();
   }
 
-  const showMove = fromAccountId != null && fromAccountName != null && accounts.length > 0;
+  const showManageAccounts = accounts.length > 0;
   const showChangeRole = fromAccountId != null && memberRole != null;
 
   const DROPDOWN_ESTIMATED_HEIGHT = 200;
@@ -134,14 +137,14 @@ export function UserRowActionsMenu({
       }
       role="menu"
     >
-      {showMove && (
+      {showManageAccounts && (
         <button
           type="button"
           role="menuitem"
           className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
-          onClick={() => closeAnd(() => setMoveOpen(true))}
+          onClick={() => closeAnd(() => setManageAccountsOpen(true))}
         >
-          Move
+          Access
         </button>
       )}
       {showChangeRole && (
@@ -197,15 +200,14 @@ export function UserRowActionsMenu({
       </Button>
       {typeof document !== "undefined" && dropdownContent && createPortal(dropdownContent, document.body)}
 
-      {showMove && fromAccountId && fromAccountName && (
-        <MoveMemberButton
+      {showManageAccounts && (
+        <ManageUserAccountsModal
           userId={userId}
-          email={email ?? ""}
-          fromAccountId={fromAccountId}
-          fromAccountName={fromAccountName}
+          userDisplay={email ?? userId}
+          currentAccountIds={currentAccountIds}
           accounts={accounts}
-          open={moveOpen}
-          onOpenChange={setMoveOpen}
+          open={manageAccountsOpen}
+          onOpenChange={setManageAccountsOpen}
         />
       )}
       <AlertDialog open={changeRoleOpen} onOpenChange={(v) => setChangeRoleOpen(v === true)}>

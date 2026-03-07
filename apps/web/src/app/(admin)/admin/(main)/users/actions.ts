@@ -403,6 +403,17 @@ export async function setAccountParentAsAdmin(
   const supabase = createServiceRoleClient();
 
   if (newParentAccountId !== null) {
+    const { data: children } = await supabase
+      .from("accounts")
+      .select("id")
+      .eq("parent_account_id", accountId)
+      .limit(1);
+    if (children && children.length > 0) {
+      return { error: "Parent accounts must stay top-level and cannot be assigned under another account." };
+    }
+  }
+
+  if (newParentAccountId !== null) {
     const { data: target } = await supabase
       .from("accounts")
       .select("id")
@@ -547,6 +558,99 @@ export async function setAccountMemberRoleAsAdmin(
   const { error } = await supabase
     .from("account_members")
     .update({ role: newRole })
+    .eq("account_id", accountId)
+    .eq("user_id", userId);
+  if (error) return { error: error.message };
+  return {};
+}
+
+/**
+ * Add a user as a member of an account (admin only). If role is owner, any existing owner is demoted to admin.
+ * Fails if user is already a member of the account.
+ */
+export async function addMemberToAccountAsAdmin(
+  accountId: string,
+  userId: string,
+  role: MemberRole
+): Promise<{ error?: string }> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: "Unauthorized" };
+
+  const supabase = createServiceRoleClient();
+
+  const { data: existing } = await supabase
+    .from("account_members")
+    .select("id")
+    .eq("account_id", accountId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (existing) return { error: "User is already a member of this account" };
+
+  if (role === "owner") {
+    const { data: currentOwners, error: ownersError } = await supabase
+      .from("account_members")
+      .select("user_id")
+      .eq("account_id", accountId)
+      .eq("role", "owner");
+    if (ownersError) return { error: ownersError.message };
+    for (const row of currentOwners ?? []) {
+      const { error: demoteError } = await supabase
+        .from("account_members")
+        .update({ role: "admin" })
+        .eq("account_id", accountId)
+        .eq("user_id", row.user_id);
+      if (demoteError) return { error: demoteError.message };
+    }
+  }
+
+  const { error: insertError } = await supabase.from("account_members").insert({
+    account_id: accountId,
+    user_id: userId,
+    role,
+  });
+  if (insertError) return { error: insertError.message };
+  return {};
+}
+
+/**
+ * Remove a user from an account (admin only). Fails if the user is the only owner (account must have an owner).
+ */
+export async function removeMemberFromAccountAsAdmin(
+  accountId: string,
+  userId: string
+): Promise<{ error?: string }> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: "Unauthorized" };
+
+  const supabase = createServiceRoleClient();
+
+  const { data: member, error: fetchError } = await supabase
+    .from("account_members")
+    .select("role")
+    .eq("account_id", accountId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (fetchError) return { error: fetchError.message };
+  if (!member) return { error: "User is not a member of this account" };
+
+  if (member.role === "owner") {
+    const { data: owners, error: countError } = await supabase
+      .from("account_members")
+      .select("user_id")
+      .eq("account_id", accountId)
+      .eq("role", "owner");
+    if (countError) return { error: countError.message };
+    if ((owners ?? []).length <= 1) {
+      return {
+        error:
+          "Account must have an owner. Set another member as owner before removing this user.",
+      };
+    }
+  }
+
+  const { error } = await supabase
+    .from("account_members")
+    .delete()
     .eq("account_id", accountId)
     .eq("user_id", userId);
   if (error) return { error: error.message };

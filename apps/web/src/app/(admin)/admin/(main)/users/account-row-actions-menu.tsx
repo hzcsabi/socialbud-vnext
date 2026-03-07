@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { RenameAccountButton } from "./rename-account-button";
 import { SetAccountParentButton } from "./set-account-parent-button";
 import { DeleteAccountButton } from "./delete-account-button";
-import type { AccountListEntry } from "./actions";
+import { AddMemberToAccountButton } from "./add-member-to-account-button";
+import type { AccountListEntry, UserListEntry } from "./actions";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -14,6 +15,12 @@ type Props = {
   accountName: string;
   currentParentId: string | null;
   accounts: AccountListEntry[];
+  /** If true, this is a parent account and cannot be assigned under another (Set parent / Move hidden). */
+  hasSubaccounts?: boolean;
+  /** All users (for Add user). When provided with memberUserIds, "Add user" is shown. */
+  users?: UserListEntry[];
+  /** User IDs already in this account (for Add user). */
+  memberUserIds?: string[];
 };
 
 export function AccountRowActionsMenu({
@@ -21,10 +28,14 @@ export function AccountRowActionsMenu({
   accountName,
   currentParentId,
   accounts,
+  hasSubaccounts = false,
+  users = [],
+  memberUserIds = [],
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
   const [renameOpen, setRenameOpen] = useState(false);
+  const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [setParentOpen, setSetParentOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -78,22 +89,26 @@ export function AccountRowActionsMenu({
           >
             Rename
           </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
-            onClick={() => closeAnd(() => setSetParentOpen(true))}
-          >
-            Set parent
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
-            onClick={() => closeAnd(() => setSetParentOpen(true))}
-          >
-            Move
-          </button>
+          {users.length > 0 && (
+            <button
+              type="button"
+              role="menuitem"
+              className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
+              onClick={() => closeAnd(() => setAddMemberOpen(true))}
+            >
+              Add user
+            </button>
+          )}
+          {!hasSubaccounts && (
+            <button
+              type="button"
+              role="menuitem"
+              className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
+              onClick={() => closeAnd(() => setSetParentOpen(true))}
+            >
+              Set parent
+            </button>
+          )}
           <button
             type="button"
             role="menuitem"
@@ -128,14 +143,26 @@ export function AccountRowActionsMenu({
         open={renameOpen}
         onOpenChange={setRenameOpen}
       />
-      <SetAccountParentButton
-        accountId={accountId}
-        accountName={accountName}
-        currentParentId={currentParentId}
-        accounts={accounts}
-        open={setParentOpen}
-        onOpenChange={setSetParentOpen}
-      />
+      {users.length > 0 && (
+        <AddMemberToAccountButton
+          accountId={accountId}
+          accountName={accountName}
+          users={users}
+          memberUserIds={memberUserIds}
+          open={addMemberOpen}
+          onOpenChange={setAddMemberOpen}
+        />
+      )}
+      {!hasSubaccounts && (
+        <SetAccountParentButton
+          accountId={accountId}
+          accountName={accountName}
+          currentParentId={currentParentId}
+          accounts={accounts}
+          open={setParentOpen}
+          onOpenChange={setSetParentOpen}
+        />
+      )}
       <DeleteAccountButton
         accountId={accountId}
         accountName={accountName}

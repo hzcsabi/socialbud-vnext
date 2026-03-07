@@ -10,7 +10,7 @@ export default async function AdminUsersPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Users</h1>
+      <h1 className="text-xl font-semibold">Accounts & Users</h1>
       <AdminUsersContent
         users={users}
         accounts={accounts}

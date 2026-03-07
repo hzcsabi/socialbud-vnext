@@ -53,7 +53,7 @@ function roleLabel(role: MemberRole) {
     case "admin":
       return "Admin";
     case "member":
-      return "User";
+      return "Member";
     default:
       return role;
   }
@@ -83,7 +83,7 @@ export function AdminUsersContent({
   accountsError,
 }: Props) {
   const [search, setSearch] = useState("");
-  const [mainTab, setMainTab] = useState<MainTab>("users");
+  const [mainTab, setMainTab] = useState<MainTab>("accounts");
   const [accountTab, setAccountTab] = useState<AccountTab>("individual");
   const [userPage, setUserPage] = useState(1);
   const [accountPage, setAccountPage] = useState(1);
@@ -195,21 +195,6 @@ export function AdminUsersContent({
         <button
           type="button"
           role="tab"
-          aria-selected={mainTab === "users"}
-          onClick={() => setMainTab("users")}
-          className={cn(
-            "rounded-t-md border border-b-0 border-border px-4 py-2 text-sm font-medium transition-colors",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-            mainTab === "users"
-              ? "border-border bg-background text-foreground -mb-px"
-              : "border-transparent bg-transparent text-muted-foreground hover:text-foreground"
-          )}
-        >
-          Users ({filteredUsers.length})
-        </button>
-        <button
-          type="button"
-          role="tab"
           aria-selected={mainTab === "accounts"}
           onClick={() => setMainTab("accounts")}
           className={cn(
@@ -221,6 +206,21 @@ export function AdminUsersContent({
           )}
         >
           Accounts ({filteredIndividualAccounts.length + filteredParentAccounts.length})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mainTab === "users"}
+          onClick={() => setMainTab("users")}
+          className={cn(
+            "rounded-t-md border border-b-0 border-border px-4 py-2 text-sm font-medium transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            mainTab === "users"
+              ? "border-border bg-background text-foreground -mb-px"
+              : "border-transparent bg-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Users ({filteredUsers.length})
         </button>
       </div>
 
@@ -323,6 +323,8 @@ export function AdminUsersContent({
                             userId={u.id}
                             email={u.email}
                             disabled={u.id === currentUserId}
+                            accounts={accounts}
+                            currentAccountIds={u.accounts.map((a) => a.accountId)}
                           />
                         </td>
                       </tr>
@@ -501,6 +503,9 @@ export function AdminUsersContent({
                                 accountName={a.name}
                                 currentParentId={a.parent_account_id}
                                 accounts={accounts}
+                                hasSubaccounts={a.hasSubaccounts}
+                                users={users}
+                                memberUserIds={a.members.map((m) => m.userId)}
                               />
                             </td>
                           </tr>
@@ -537,6 +542,9 @@ export function AdminUsersContent({
                                             fromAccountName={a.name}
                                             memberRole={m.role}
                                             accounts={accounts}
+                                            currentAccountIds={
+                                              users.find((uu) => uu.id === m.userId)?.accounts.map((ac) => ac.accountId) ?? [a.id]
+                                            }
                                             disabled={m.userId === currentUserId}
                                           />
                                         </div>
@@ -573,6 +581,9 @@ export function AdminUsersContent({
                                   accountName={sub.name}
                                   currentParentId={sub.parent_account_id}
                                   accounts={accounts}
+                                  hasSubaccounts={sub.hasSubaccounts}
+                                  users={users}
+                                  memberUserIds={sub.members.map((m) => m.userId)}
                                 />
                               </td>
                             </tr>
