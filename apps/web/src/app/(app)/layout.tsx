@@ -27,7 +27,7 @@ export default async function AppLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name, company_name, website, deleted_at")
+    .select("display_name, company_name, website, deleted_at, suspended_at")
     .eq("user_id", user.id)
     .maybeSingle();
   if (profile?.deleted_at) {
@@ -37,6 +37,36 @@ export default async function AppLayout({
   if (incomplete) redirect("/onboarding");
 
   const displayName = profile.display_name?.trim() || user.email || "Account";
+  const isSuspended =
+    profile?.suspended_at != null && new Date(profile.suspended_at) > new Date();
+
+  if (isSuspended) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
+        <div
+          role="alert"
+          className="max-w-md rounded-lg border border-amber-500/50 bg-amber-500/10 px-6 py-5 text-sm text-amber-800 dark:text-amber-200"
+        >
+          <p className="font-semibold">Your account is suspended.</p>
+          <p className="mt-2 text-amber-700 dark:text-amber-300/90">
+            If you have questions or believe this is a mistake, please contact{" "}
+            <a
+              href="mailto:support@socialbud.com"
+              className="underline hover:no-underline"
+            >
+              support@socialbud.com
+            </a>
+            .
+          </p>
+        </div>
+        <form action="/api/auth/signout" method="post" className="mt-8">
+          <Button type="submit" variant="outline" size="sm">
+            Sign out
+          </Button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen">

@@ -304,7 +304,7 @@ export function UserRowActionsMenu({
           <AlertDialogHeader>
             <AlertDialogTitle>Suspend user</AlertDialogTitle>
             <AlertDialogDescription>
-              Suspend this user? They will not be able to sign in until unsuspended. Their data is preserved.
+              Suspend this user? They can still sign in but will see a notice to contact support. Their data is preserved.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {suspendError && (

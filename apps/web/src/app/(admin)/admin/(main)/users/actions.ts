@@ -681,7 +681,7 @@ export async function removeMemberFromAccountAsAdmin(
 
 /**
  * Suspend a user (admin only). Sets profiles.suspended_at so status shows as suspended in admin UI.
- * Does not delete the user. Optionally also sets auth banned_until to block sign-in.
+ * Suspended users can still sign in; they see a notice in the app to contact support.
  */
 export async function suspendUserAsAdmin(userId: string): Promise<{ error?: string }> {
   const admin = await getAdminUser();
@@ -689,9 +689,9 @@ export async function suspendUserAsAdmin(userId: string): Promise<{ error?: stri
   if (admin.user.id === userId) return { error: "You cannot suspend your own account" };
 
   const supabase = createServiceRoleClient();
-  const bannedUntil = new Date();
-  bannedUntil.setFullYear(bannedUntil.getFullYear() + 10);
-  const iso = bannedUntil.toISOString();
+  const suspendedUntil = new Date();
+  suspendedUntil.setFullYear(suspendedUntil.getFullYear() + 10);
+  const iso = suspendedUntil.toISOString();
   const now = new Date().toISOString();
 
   const { error: profileError } = await supabase
@@ -702,10 +702,6 @@ export async function suspendUserAsAdmin(userId: string): Promise<{ error?: stri
     );
   if (profileError) return { error: profileError.message };
 
-  // Supabase API supports banned_until; AdminUserAttributes type is not yet updated in @supabase/supabase-js
-  await supabase.auth.admin.updateUserById(userId, {
-    banned_until: iso,
-  } as Parameters<typeof supabase.auth.admin.updateUserById>[1]);
   revalidatePath("/admin/users");
   return {};
 }
