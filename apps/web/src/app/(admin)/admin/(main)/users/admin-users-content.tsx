@@ -59,6 +59,19 @@ function roleLabel(role: MemberRole) {
   }
 }
 
+function roleClass(role: MemberRole) {
+  switch (role) {
+    case "owner":
+      return "bg-amber-500/15 text-amber-700 dark:text-amber-400";
+    case "admin":
+      return "bg-blue-500/15 text-blue-700 dark:text-blue-400";
+    case "member":
+      return "bg-muted text-muted-foreground";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+}
+
 function matchesSearch(text: string | null, query: string): boolean {
   if (!text) return false;
   return text.toLowerCase().includes(query.toLowerCase());
@@ -289,22 +302,9 @@ export function AdminUsersContent({
                                   >
                                     {account.accountName}
                                   </button>
-                                  <span className="ml-1 rounded bg-muted px-1.5 py-0.5 capitalize">
-                                    {account.role}
+                                  <span className={cn("ml-1 rounded px-1.5 py-0.5 capitalize", roleClass(account.role))}>
+                                    {roleLabel(account.role)}
                                   </span>
-                                  <span className="ml-1 text-muted-foreground">
-                                    ({account.memberCount} member{account.memberCount !== 1 ? "s" : ""})
-                                  </span>
-                                  {account.parentAccountName ? (
-                                    <span className="ml-1 text-muted-foreground">
-                                      ↑ Parent: {account.parentAccountName}
-                                    </span>
-                                  ) : null}
-                                  {account.hasSubaccounts ? (
-                                    <span className="ml-1 text-muted-foreground">
-                                      ↓ sub-accounts
-                                    </span>
-                                  ) : null}
                                 </li>
                               ))}
                             </ul>
@@ -446,7 +446,7 @@ export function AdminUsersContent({
                       const parentExpanded = expandedParentIds.has(a.id);
                       const membersExpanded = expandedMemberIds.has(a.id);
                       const showExpand =
-                        (accountTab === "parent" && a.hasSubaccounts) ||
+                        (accountTab === "parent" && (a.hasSubaccounts || a.memberCount > 0)) ||
                         (accountTab === "individual" && a.memberCount > 0);
                       const isExpanded = accountTab === "parent" ? parentExpanded : membersExpanded;
                       return (
@@ -465,8 +465,8 @@ export function AdminUsersContent({
                                   aria-label={
                                     accountTab === "parent"
                                       ? isExpanded
-                                        ? "Collapse sub-accounts"
-                                        : "Expand sub-accounts"
+                                        ? "Collapse members and sub-accounts"
+                                        : "Expand members and sub-accounts"
                                       : isExpanded
                                         ? "Collapse members"
                                         : "Expand members"
@@ -510,10 +510,10 @@ export function AdminUsersContent({
                               />
                             </td>
                           </tr>
-                          {accountTab === "individual" && membersExpanded && (
+                          {(accountTab === "individual" && membersExpanded) || (accountTab === "parent" && parentExpanded && a.memberCount > 0) ? (
                             <tr className="border-b border-border bg-muted/30 last:border-0">
                               <td className="w-8 px-2 py-3" />
-                              <td colSpan={8} className="px-4 py-3 pl-10">
+                              <td colSpan={accountTab === "parent" ? 9 : 8} className="px-4 py-3 pl-10">
                                 {a.members.length === 0 ? (
                                   <span className="text-sm text-muted-foreground">No members</span>
                                 ) : (
@@ -526,7 +526,7 @@ export function AdminUsersContent({
                                         <div className="flex min-w-0 flex-1 items-center gap-4">
                                           <span className="shrink-0">{m.name ?? "—"}</span>
                                           <span className="min-w-0 truncate">{m.email || m.userId}</span>
-                                          <span className="inline-flex shrink-0 rounded bg-muted px-2 py-0.5 text-xs font-medium capitalize text-muted-foreground">
+                                          <span className={cn("inline-flex shrink-0 rounded px-2 py-0.5 text-xs font-medium", roleClass(m.role))}>
                                             {roleLabel(m.role)}
                                           </span>
                                           <span
@@ -556,7 +556,7 @@ export function AdminUsersContent({
                                 )}
                               </td>
                             </tr>
-                          )}
+                          ) : null}
                           {accountTab === "parent" && parentExpanded && subaccounts.map((sub) => (
                             <tr key={sub.id} className="border-b border-border bg-muted/30 last:border-0">
                               <td className="w-8 px-2 py-3" />
