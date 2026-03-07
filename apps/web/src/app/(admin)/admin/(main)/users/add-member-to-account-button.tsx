@@ -14,21 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { addMemberToAccountAsAdmin } from "./actions";
 import type { UserListEntry, MemberRole } from "./actions";
-
-const ROLES: MemberRole[] = ["member", "manager", "owner"];
-
-function roleLabel(role: MemberRole) {
-  switch (role) {
-    case "owner":
-      return "Owner";
-    case "manager":
-      return "Manager";
-    case "member":
-      return "Member";
-    default:
-      return role;
-  }
-}
+import { MEMBER_ROLES, roleLabel } from "@/lib/roles";
 
 type Props = {
   accountId: string;
@@ -132,7 +118,7 @@ export function AddMemberToAccountButton({
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
               disabled={loading}
             >
-              {ROLES.map((r) => (
+              {MEMBER_ROLES.map((r) => (
                 <option key={r} value={r}>
                   {roleLabel(r)}
                 </option>

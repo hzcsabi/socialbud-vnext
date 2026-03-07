@@ -18,22 +18,8 @@ import { ManageUserAccountsModal } from "./manage-user-accounts-modal";
 import { DeleteUserButton } from "./delete-user-button";
 import { suspendUserAsAdmin, unsuspendUserAsAdmin, setAccountMemberRoleAsAdmin } from "./actions";
 import type { AccountListEntry, MemberRole, UserStatus } from "./actions";
+import { MEMBER_ROLES, roleLabel } from "@/lib/roles";
 import { cn } from "@/lib/utils";
-
-const ROLES: MemberRole[] = ["owner", "manager", "member"];
-
-function roleLabel(role: MemberRole) {
-  switch (role) {
-    case "owner":
-      return "Owner";
-    case "manager":
-      return "Manager";
-    case "member":
-      return "Member";
-    default:
-      return role;
-  }
-}
 
 type Props = {
   userId: string;
@@ -274,7 +260,7 @@ export function UserRowActionsMenu({
               onChange={(e) => setSelectedRole(e.target.value as MemberRole)}
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
             >
-              {ROLES.map((r) => (
+              {MEMBER_ROLES.map((r) => (
                 <option key={r} value={r}>
                   {roleLabel(r)}
                 </option>

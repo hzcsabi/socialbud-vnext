@@ -15,6 +15,7 @@ import { DeleteUserButton } from "./delete-user-button";
 import { AccountRowActionsMenu } from "./account-row-actions-menu";
 import { UserRowActionsMenu } from "./user-row-actions-menu";
 import type { UserListEntry, AccountListEntry, UserStatus, MemberRole } from "./actions";
+import { roleLabel, roleClass } from "@/lib/roles";
 
 const PAGE_SIZE = 50;
 
@@ -48,32 +49,6 @@ function statusClass(status: UserStatus) {
       return "bg-muted text-muted-foreground";
     default:
       return "";
-  }
-}
-
-function roleLabel(role: MemberRole) {
-  switch (role) {
-    case "owner":
-      return "Owner";
-    case "manager":
-      return "Manager";
-    case "member":
-      return "Member";
-    default:
-      return role;
-  }
-}
-
-function roleClass(role: MemberRole) {
-  switch (role) {
-    case "owner":
-      return "bg-amber-500/15 text-amber-700 dark:text-amber-400";
-    case "manager":
-      return "bg-blue-500/15 text-blue-700 dark:text-blue-400";
-    case "member":
-      return "bg-muted text-muted-foreground";
-    default:
-      return "bg-muted text-muted-foreground";
   }
 }
 
